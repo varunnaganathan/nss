@@ -979,6 +979,7 @@ ListModules(void)
       printf ("\n");
       printf ("    slot: %s\n", PK11_GetSlotName(le->slot));
       printf ("   token: %s\n", PK11_GetTokenName(le->slot));
+      printf ("     uri: %s\n", PK11_GetTokenUri(le->slot));
     }
     PK11_FreeSlotList(list);
 

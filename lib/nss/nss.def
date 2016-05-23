@@ -188,6 +188,7 @@ PK11_GetSlotFromPrivateKey;
 PK11_GetSlotID;
 PK11_GetSlotSeries;
 PK11_GetTokenInfo;
+PK11_GetTokenUri;
 PK11_GetWindow;
 PK11_GetWrapKey;
 PK11_IVFromParam;

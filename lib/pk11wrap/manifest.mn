@@ -43,6 +43,7 @@ CSRCS = \
 	pk11sdr.c \
 	pk11skey.c \
 	pk11slot.c \
+	pk11uri.c \
 	pk11util.c \
 	$(NULL)
 
@@ -51,6 +52,7 @@ LIBRARY_NAME = pk11wrap
 LIBRARY_VERSION = 3
 SOFTOKEN_LIBRARY_VERSION = 3
 DEFINES += -DSHLIB_SUFFIX=\"$(DLL_SUFFIX)\" -DSHLIB_PREFIX=\"$(DLL_PREFIX)\" \
+        $(shell pkg-config --cflags p11-kit-1) \
         -DSHLIB_VERSION=\"$(LIBRARY_VERSION)\" \
         -DSOFTOKEN_SHLIB_VERSION=\"$(SOFTOKEN_LIBRARY_VERSION)\"
 

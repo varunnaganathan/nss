@@ -92,6 +92,7 @@ CK_SLOT_ID PK11_GetSlotID(PK11SlotInfo *slot);
 SECMODModuleID PK11_GetModuleID(PK11SlotInfo *slot);
 SECStatus PK11_GetSlotInfo(PK11SlotInfo *slot, CK_SLOT_INFO *info);
 SECStatus PK11_GetTokenInfo(PK11SlotInfo *slot, CK_TOKEN_INFO *info);
+char *PK11_GetTokenUri(PK11SlotInfo *slot);
 PRBool PK11_IsDisabled(PK11SlotInfo *slot);
 PRBool PK11_HasRootCerts(PK11SlotInfo *slot);
 PK11DisableReasons PK11_GetDisabledReason(PK11SlotInfo *slot);
