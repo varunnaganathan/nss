@@ -48,3 +48,22 @@ PK11_GetTokenUri(PK11SlotInfo *slot)
     p11_kit_uri_free(uri);
     return result;
 }
+
+SECStatus
+PK11_PrintURIFromModule(SECMODModule *module) {
+    P11KitUri *uri = p11_kit_uri_new();
+    CK_INFO *moduleinfo = p11_kit_uri_get_module_info(uri);
+    char *string = NULL;
+    //This fills the module info into the CK_INFO_PTR passed
+    SECStatus status = PK11_GetModInfo(module, moduleinfo);
+    if (!status) {
+        return SECFailure;
+    }
+    //Format the uri to string form
+    int uristatus = p11_kit_uri_format(uri, P11_KIT_URI_FOR_MODULE, &string);
+    if(uristatus) {
+        printf("%s\n", string);
+        return SECSuccess;
+    }
+    return SECFailure;
+}
