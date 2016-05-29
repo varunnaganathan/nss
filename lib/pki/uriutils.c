@@ -1,5 +1,5 @@
 //Similar to SECMOD_FindModule
-SECMODModule *PK11_FindModuleByUri(char *uri)
+SECMODModule *SECMOD_FindModuleByUri(char *uri)
 {
 	P11KitUri *URI = NULL;
 	CK_ATTRIBUTE_POINTER library_descripton;
@@ -9,17 +9,23 @@ SECMODModule *PK11_FindModuleByUri(char *uri)
 	SECMODModule *module = NULL;
 	CK_INFO *moduleinfo;
 	SECStatus status;
-	int st = p11_kit_uri_parse(uri, P11_KIT_URI_FOR_MODULE, URI);
-	if (!st)
+    int st;
+
+	st = p11_kit_uri_parse(uri, P11_KIT_URI_FOR_MODULE, URI);
+	if (st == P11_KIT_URI_OK)
 	{
 		//Raise error
 	}
-	/*Have doubts regarding the CK_ATTRIBUTE_TYPE.passing ints 0 for library-description
-	1 for libarry-manufacturer and 2 for library-version */
+	/*
+    * Have doubts regarding the CK_ATTRIBUTE_TYPE.passing ints 0 for library-description
+	* 1 for libarry-manufacturer and 2 for library-version 
+    */
 	library_description = p11_kit_uri_get_attribute(URI, 0);
 	library_manufacturer = p11_kit_uri_get_attribute(URI, 1);
 	library_version = p11_kit_uri_get_attribute(URI, 2);
-	//Ask what this means.Copied because was present in SECMOD_FindModule
+	/*
+    * Ask what this means.Copied because was present in SECMOD_FindModule
+    */
 	if (!moduleLock) {
     	PORT_SetError(SEC_ERROR_NOT_INITIALIZED);
 		return module;
@@ -28,12 +34,13 @@ SECMODModule *PK11_FindModuleByUri(char *uri)
     for(listnode =  modules; listnode != NULL; listnode = listnode->next)
     {
     	status = PK11_GetModInfo(&listnode->module, moduleinfo);
-    	//use PORT_Strcmp to compare
-    	if(moduleinfo->manufacturerID == library_manufacturer && moduleinfo->libraryDescription == libraryDescription && moduleinfo->libraryVersion == libraryVersion)
-    	{
-    		module = &listnode->module;
-    		break;
-    	}
+    	/*
+        * Match the module info to the URI
+        */
+        if (p11_kit_match_module_info(URI, moduleinfo) == 1) {
+            module = &listnode->module;
+            break;
+        }
     }
     SECMOD_ReleaseReadLock(moduleLock);
     if(!module)
@@ -54,6 +61,7 @@ NSSTrustDomain_FindTokenByUri(NSSTrustDomain *td, char *uri)
     PK11SlotInfo *slotinfo;
     SECStatus status;
     CK_TOKEN_INFO tokeninfo;
+
     st = p11_kit_uri_format(uri, P11_KIT_URI_FOR_TOKEN, URI);
     if(st != P11_KIT_URI_OK) {
         //Raise error

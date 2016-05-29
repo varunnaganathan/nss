@@ -42,7 +42,9 @@ PK11_GetTokenUri(PK11SlotInfo *slot)
 	    return NULL;
     }
     if (p11_kit_uri_format(uri, P11_KIT_URI_FOR_TOKEN, &result)) {
-	    //PORT_SetError(WTF?);
+	    /*
+        * PORT_SetError(WTF?);
+        */
 	    result = NULL;
     }
     p11_kit_uri_free(uri);
@@ -50,18 +52,24 @@ PK11_GetTokenUri(PK11SlotInfo *slot)
 }
 
 SECStatus
-PK11_PrintURIFromModule(SECMODModule *module) {
+PK11_GetModuleURI(SECMODModule *module) {
     P11KitUri *uri = p11_kit_uri_new();
     CK_INFO *moduleinfo = p11_kit_uri_get_module_info(uri);
     char *string = NULL;
-    //This fills the module info into the CK_INFO_PTR passed
-    SECStatus status = PK11_GetModInfo(module, moduleinfo);
-    if (!status) {
+    SECStatus status;
+
+    /*
+    * This fills the module info into the CK_INFO_PTR passed
+    */
+    status = PK11_GetModInfo(module, moduleinfo);
+    if (status == SECFailure) {
         return SECFailure;
     }
-    //Format the uri to string form
+    /*
+    * Format the uri to string form
+    */
     int uristatus = p11_kit_uri_format(uri, P11_KIT_URI_FOR_MODULE, &string);
-    if(uristatus) {
+    if(uristatus == P11_KIT_URI_OK) {
         printf("%s\n", string);
         return SECSuccess;
     }
