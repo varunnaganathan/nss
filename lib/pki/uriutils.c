@@ -87,3 +87,52 @@ NSSTrustDomain_FindTokenByUri(NSSTrustDomain *td, char *uri)
     NSSRWLock_UnlockRead(td->tokensLock);
     return tok;
 }
+
+//Similar to CERT_FindCertByKeyID
+CERTCertificate *
+CERT_FindCertByURI(CERTCertDBHandle *handle, SECItem *name, char *uri) {
+    
+    P11KitUri URI;
+    int uristatus;
+    CERTCertList *list;
+    CERTCertificate *cert = NULL;
+    CERTCertListNode *node, *head;
+    CK_ATTRIBUTE_PTR id;
+    CK_ATTRIBUTE_PTR object;
+    CK_ATTRIBUTE_PTR type;
+
+    uristatus = p11_kit_uri_parse(uri, P11_KIT_URI_FOR_OBJECT, &URI);
+    if (uristatus != P11_KIT_URI_OK) {
+        return (CERTCertificate *)NULL;
+    }
+
+    id = p11_kit_uri_get_attribute(&URI,CKA_ID);
+    object = p11_kit_uri_get_attribute(&URI,CKA_LABEL);
+    type = p11_kit_uri_get_attribute(&URI,CKA_CLASS);
+
+    if( !id || !object || !type) {
+        return (CERTCertificate *)NULL;
+    }
+
+    list = CERT_CreateSubjectCertList(NULL, handle, name, 0, PR_FALSE);
+    if (list == NULL)
+        return (CERTCertificate *)NULL;
+    
+    node = head = CERT_LIST_HEAD(list);
+    if (head) {
+        do {
+            if (node->cert && SECITEM_ItemsAreEqual(&node->cert->subjectKeyID, id->pValue) &&
+                SECITEM_ItemsAreEqual(&node->cert->nickname, object->pValue)) {
+                cert = CERT_DupCertificate(node->cert);
+                goto done;
+            }
+            node = CERT_LIST_NEXT(node);  
+        } while (node && head != node);
+    }
+    PORT_SetError(SEC_ERROR_UNKNOWN_ISSUER);
+done:
+    if (list) {
+        CERT_DestroyCertList(list);
+    }
+    return cert;
+}
