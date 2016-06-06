@@ -137,19 +137,3 @@ done:
     return cert;
 }
 
-SECKEYPRivateKey *
-PK11_FindPrivateKeyByURI(PK11SlotInfo *slot, void *wincx, char *uri) {
-    P11KitUri URI;
-    SECItem *keyID = NULL;
-    SECKEYPRivateKey resultKey;
-
-    uristatus = p11_kit_uri_parse(uri, P11_KIT_URI_FOR_OBJECT, &URI);
-    if (uristatus != P11_KIT_URI_OK) {
-        return SECFailure;
-    }
-    keyID = p11_kit_uri_get_attribute(&URI, CKA_ID);
-    resultKey = PK11_FindKeyByKeyID(slot, keyID, wincx);
-    if (!resultKey)
-        return NULL;
-    return resultKey;
-}
