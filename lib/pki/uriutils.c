@@ -1,54 +1,48 @@
 //Similar to SECMOD_FindModule
 SECMODModule *SECMOD_FindModuleByUri(char *uri)
 {
-	P11KitUri *URI = NULL;
-	CK_ATTRIBUTE_POINTER library_descripton;
-	CK_ATTRIBUTE_POINTER library_manufacturer;
-	CK_ATTRIBUTE_POINTER library_version;
-	SECMODModuleList *listnode;
-	SECMODModule *module = NULL;
-	CK_INFO *moduleinfo;
-	SECStatus status;
+    P11KitUri *URI = NULL;
+    CK_INFO *moduleinfo = NULL;
+    SECMODModuleList *listnode;
+    SECMODModule *module = NULL;
+    SECStatus status;
     int st;
 
-	st = p11_kit_uri_parse(uri, P11_KIT_URI_FOR_MODULE, URI);
-	if (st == P11_KIT_URI_OK)
-	{
-		//Raise error
-	}
-	/*
-    * Have doubts regarding the CK_ATTRIBUTE_TYPE.passing ints 0 for library-description
-	* 1 for libarry-manufacturer and 2 for library-version 
-    */
-	library_description = p11_kit_uri_get_attribute(URI, 0);
-	library_manufacturer = p11_kit_uri_get_attribute(URI, 1);
-	library_version = p11_kit_uri_get_attribute(URI, 2);
-	/*
+    st = p11_kit_uri_parse(uri, P11_KIT_URI_FOR_MODULE, URI);
+    if (st != P11_KIT_URI_OK)
+    {
+        //Raise error
+    }
+    /*
     * Ask what this means.Copied because was present in SECMOD_FindModule
     */
-	if (!moduleLock) {
-    	PORT_SetError(SEC_ERROR_NOT_INITIALIZED);
-		return module;
+    if (!moduleLock) {
+        PORT_SetError(SEC_ERROR_NOT_INITIALIZED);
+        return module;
     }
     SECMOD_GetReadLock(moduleLock);
     for(listnode =  modules; listnode != NULL; listnode = listnode->next)
     {
-    	status = PK11_GetModInfo(&listnode->module, moduleinfo);
-    	/*
+        status = PK11_GetModInfo(listnode->module, moduleinfo);
+        if (status != SECSuccess) {
+            return NULL;
+        }
+        /*
         * Match the module info to the URI
         */
-        if (p11_kit_match_module_info(URI, moduleinfo) == 1) {
-            module = &listnode->module;
+        if (p11_kit_uri_match_module_info(URI, moduleinfo) == 1) {
+            module = listnode->module;
             break;
         }
     }
     SECMOD_ReleaseReadLock(moduleLock);
     if(!module)
     {
-    	return (SECMODModule *)NULL;
+        return (SECMODModule *)NULL;
     }
     return module;
 }
+
 
 //2nd version similar to NSSTrustDomain_FindTokenByName
 NSS_IMPLEMENT NSSToken *
@@ -56,13 +50,12 @@ NSSTrustDomain_FindTokenByUri(NSSTrustDomain *td, char *uri)
 {
     P11KitUri *URI = NULL;
     int st;
-    PRStatus nsserv;
-    NSSToken *token;
     PK11SlotInfo *slotinfo;
     SECStatus status;
     CK_TOKEN_INFO tokeninfo;
+    NSSToken *tok = NULL;
 
-    st = p11_kit_uri_format(uri, P11_KIT_URI_FOR_TOKEN, URI);
+    st = p11_kit_uri_parse(uri, P11_KIT_URI_FOR_TOKEN, URI);
     if(st != P11_KIT_URI_OK) {
         //Raise error
     }
@@ -77,7 +70,7 @@ NSSTrustDomain_FindTokenByUri(NSSTrustDomain *td, char *uri)
             if(status == SECFailure) {
                 //Raise error
             }
-            if (p11_kit_uri_match_token_info(URI, &token_info) == 1)
+            if (p11_kit_uri_match_token_info(URI, &tokeninfo) == 1)
             {
                 break;
             }
@@ -92,7 +85,7 @@ NSSTrustDomain_FindTokenByUri(NSSTrustDomain *td, char *uri)
 CERTCertificate *
 CERT_FindCertByURI(CERTCertDBHandle *handle, SECItem *name, char *uri) {
     
-    P11KitUri URI;
+    P11KitUri *URI;
     int uristatus;
     CERTCertList *list;
     CERTCertificate *cert = NULL;
@@ -101,14 +94,14 @@ CERT_FindCertByURI(CERTCertDBHandle *handle, SECItem *name, char *uri) {
     CK_ATTRIBUTE_PTR object;
     CK_ATTRIBUTE_PTR type;
 
-    uristatus = p11_kit_uri_parse(uri, P11_KIT_URI_FOR_OBJECT, &URI);
+    uristatus = p11_kit_uri_parse(uri, P11_KIT_URI_FOR_OBJECT, URI);
     if (uristatus != P11_KIT_URI_OK) {
         return (CERTCertificate *)NULL;
     }
 
-    id = p11_kit_uri_get_attribute(&URI,CKA_ID);
-    object = p11_kit_uri_get_attribute(&URI,CKA_LABEL);
-    type = p11_kit_uri_get_attribute(&URI,CKA_CLASS);
+    id = p11_kit_uri_get_attribute(URI,CKA_ID);
+    object = p11_kit_uri_get_attribute(URI,CKA_LABEL);
+    type = p11_kit_uri_get_attribute(URI,CKA_CLASS);
 
     if( !id || !object || !type) {
         return (CERTCertificate *)NULL;

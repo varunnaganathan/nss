@@ -77,28 +77,30 @@ PK11_GetModuleURI(SECMODModule *module) {
 }
 
 SECStatus
-Fill_CK_ATTRIBUTE_Data(CK_ATTRIBUTE_PTR ptr, CK_ATTRIBUTE_TYPE type, CK_VOID_PTR value) {
+Fill_CK_ATTRIBUTE_Data(CK_ATTRIBUTE_PTR ptr, CK_ATTRIBUTE_TYPE type, CK_VOID_PTR value,  CK_ULONG ulValueLen) {
     if (!ptr) {
         return SECFailure;
     }
     ptr->type= type;
     ptr->pValue = value;
-    ptr->ulValueLen = sizeof(value);
+    ptr->ulValueLen = ulValueLen;
     return SECSuccess;
 }
 
 
 SECStatus
 PK11_GetCertURI(CERTCertificate *cert) {
-    P11KitUri URI;
+    P11KitUri *uri;
     int st, uristatus;
     SECStatus rv;
     SECStatus flag;
     PK11SlotInfo *slot = NULL;
-    CK_ATTRIBUTE_PTR id;
-    CK_ATTRIBUTE_PTR object;
-    CK_ATTRIBUTE_PTR type;
+    CK_ATTRIBUTE id;
+    CK_ATTRIBUTE object;
+    CK_ATTRIBUTE type;
     char *string;
+    CK_OBJECT_CLASS class = CKO_CERTIFICATE;
+
 
     uri = p11_kit_uri_new();
     if (!uri) {
@@ -115,40 +117,31 @@ PK11_GetCertURI(CERTCertificate *cert) {
     Assigning the attributes of the CK_ATTRIBUTE Pointers
     */
 
+    
     /*
     Setting values using external functions
-    flag = Fill_CK_ATTRIBUTE_Data(id, CKA_ID, cert->subjectKeyID);
-    flag = Fill_CK_ATTRIBUTE_Data(object, CKA_LABEL, cert->nickname);
-    flag = Fill_CK_ATTRIBUTE_Data(type, CKA_CLASS, CKO_CERTIFICATE);
     */
-
+    flag = Fill_CK_ATTRIBUTE_Data(&id, CKA_ID, &cert->subjectID, sizeof(cert->subjectID));
+    flag = Fill_CK_ATTRIBUTE_Data(&object, CKA_LABEL, &cert->nickname, sizeof(cert->nickname));
+    flag = Fill_CK_ATTRIBUTE_Data(&type, CKA_CLASS, &class, sizeof(class));
+    if (flag == SECFailure) {
+        return SECFailure;
+    }
     /*
     Better to use a function to set attributes.Once attribute assignment
     verified, will switch to the external function
     */
-    id->type = CKA_ID;
-    id->pValue = cert->subjectKeyID;
-    id->ulValueLen = sizeof(cert->subjectKeyID);
-    
-    object->type = CKA_LABEL;
-    object->pValue = cert->nickname;
-    object->ulValueLen = sizeof(cert->nickname);
-
-    type->type=CKA_CLASS;
-    type->pValue = CKO_CERTIFICATE;
-    type->ulValueLen = sizeof(CKO_CERTIFICATE);
-    
-    st = p11_kit_uri_set_attribute(&URI, id) && 
-         p11_kit_uri_set_attribute(&URI, object) && 
-         p11_kit_uri_set_attribute(&URI, type);
+  
+    st = p11_kit_uri_set_attribute(uri, &id) && 
+         p11_kit_uri_set_attribute(uri, &object) && 
+         p11_kit_uri_set_attribute(uri, &type);
     if (st != P11_KIT_URI_OK) {
         return SECFailure;
     }
-    uristatus = p11_kit_uri_format(&URI, P11_KIT_URI_FOR_OBJECT, &string)
+    uristatus = p11_kit_uri_format(uri, P11_KIT_URI_FOR_OBJECT, &string);
     if (uristatus == P11_KIT_URI_OK) {
         printf("%s\n", string);
         return SECSuccess;
     }
     return SECFailure;
 }   
-
