@@ -94,7 +94,6 @@ PK11_GetCertURI(CERTCertificate *cert) {
     int st, uristatus;
     SECStatus rv;
     SECStatus flag;
-    CK_TOKEN_INFO *tokeninfo;
     PK11SlotInfo *slot = NULL;
     CK_ATTRIBUTE_PTR id;
     CK_ATTRIBUTE_PTR object;
@@ -152,3 +151,58 @@ PK11_GetCertURI(CERTCertificate *cert) {
     }
     return SECFailure;
 }   
+
+SECStatus
+PK11_GetPrivateKeyURI(SECKEYPrivateKey *key) {
+    P11KitUri URI;
+    int st, uristatus;
+    SECStatus rv;
+    SECStatus flag;
+    CK_TOKEN_INFO *tokeninfo;
+    PK11SlotInfo *slot = NULL;
+    CK_ATTRIBUTE_PTR id;
+    CK_ATTRIBUTE_PTR object;
+    CK_ATTRIBUTE_PTR type;
+    char *string;
+
+    uri = p11_kit_uri_new();
+    if (!uri) {
+        PORT_SetError(SEC_ERROR_NO_MEMORY);
+        return SECFailure;
+    }
+    slot = cert->slot;
+    rv = PK11_GetTokenInfo(slot, p11_kit_uri_get_token_info(uri));
+    if (rv == SECFailure) {
+        p11_kit_uri_free(uri);
+        return SECFailure;
+    }
+
+    /*
+    Better to use a function to set attributes.Once attribute assignment
+    verified, will switch to the external function
+    */
+    id->type = CKA_ID;
+    id->pValue = key->pkcs11ID;
+    id->ulValueLen = sizeof(key->pkcs11ID);
+    
+    object->type = CKA_LABEL;
+    object->pValue = key->;//Have to assign this
+    object->ulValueLen = //Have to assign this 
+
+    type->type=CKA_CLASS;
+    type->pValue = CKO_PRIVATE_KEY;
+    type->ulValueLen = sizeof(CKO_PRIVATE_KEY);
+
+    st = p11_kit_uri_set_attribute(&URI, id) && 
+         p11_kit_uri_set_attribute(&URI, object) && 
+         p11_kit_uri_set_attribute(&URI, type);
+    if (st != P11_KIT_URI_OK) {
+        return SECFailure;
+    }
+    uristatus = p11_kit_uri_format(&URI, P11_KIT_URI_FOR_OBJECT, &string)
+    if (uristatus == P11_KIT_URI_OK) {
+        printf("%s\n", string);
+        return SECSuccess;
+    }
+    return SECFailure;
+}
