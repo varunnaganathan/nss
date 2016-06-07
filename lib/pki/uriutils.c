@@ -130,3 +130,22 @@ done:
     return cert;
 }
 
+SECKEYPRivateKey *
+PK11_FindPrivateKeyByURI(PK11SlotInfo *slot, void *wincx, char *uri) {
+    P11KitUri *URI;
+    //SECItem *keyID = NULL;
+    CK_ATTRIBUTE *keyinfo = NULL;
+    SECKEYPRivateKey *resultKey = NULL;
+    int uristatus;
+
+    uristatus = p11_kit_uri_parse(uri, P11_KIT_URI_FOR_OBJECT, URI);
+    if (uristatus != P11_KIT_URI_OK) {
+        return NULL;
+    }
+    keyinfo = p11_kit_uri_get_attribute(URI, CKA_ID);
+    //ask about this
+    resultKey = PK11_FindKeyByKeyID(slot, (SECItem *)keyinfo->pValue, wincx);
+    if (!resultKey)
+        return NULL;
+    return resultKey;
+} 

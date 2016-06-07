@@ -145,3 +145,67 @@ PK11_GetCertURI(CERTCertificate *cert) {
     }
     return SECFailure;
 }   
+
+SECStatus
+PK11_GetPrivateKeyURI(SECKEYPrivateKey *key) {
+    P11KitUri *URI;
+    int st, uristatus;
+    SECStatus rv;
+    SECStatus flag;
+    PK11SlotInfo *slot = NULL;
+    CK_ATTRIBUTE id;
+    CK_ATTRIBUTE object;
+    CK_ATTRIBUTE type;
+    char *string;
+    char *nickname;
+    CK_OBJECT_CLASS class = CKO_PRIVATE_KEY;
+
+
+    URI = p11_kit_uri_new();
+    if (!URI) {
+        PORT_SetError(SEC_ERROR_NO_MEMORY);
+        return SECFailure;
+    }
+    slot = key->pkcs11Slot;
+    rv = PK11_GetTokenInfo(slot, p11_kit_uri_get_token_info(URI));
+    if (rv == SECFailure) {
+        p11_kit_uri_free(URI);
+        return SECFailure;
+    }
+    nickname = PK11_GetObjectNickName(key->pkcs11Slot, key->pkcs11ID);
+    flag = Fill_CK_ATTRIBUTE_Data(&id, CKA_ID, &key->pkcs11ID, sizeof(key->pkcs11ID));
+    flag = Fill_CK_ATTRIBUTE_Data(&id, CKA_LABEL, &nickname, sizeof(nickname));    
+    flag = Fill_CK_ATTRIBUTE_Data(&id, CKA_CLASS, &class, sizeof(class));
+    if (flag == SECFailure) {
+        return SECFailure;
+    }
+    /*
+    Better to use a function to set attributes.Once attribute assignment
+    verified, will switch to the external function
+    
+    id.type = CKA_ID;
+    id.pValue = key->pkcs11ID;
+    id.ulValueLen = sizeof(key->pkcs11ID);
+    
+    object->type = CKA_LABEL;
+    object->pValue = nickname;//Have to assign this
+    object->ulValueLen = sizeof(nickname)//Have to assign this 
+
+    type->type=CKA_CLASS;
+    type->pValue = CKO_PRIVATE_KEY;
+    type->ulValueLen = sizeof(CKO_PRIVATE_KEY);
+    */
+
+    st = p11_kit_uri_set_attribute(URI, &id) && 
+         p11_kit_uri_set_attribute(URI, &object) && 
+         p11_kit_uri_set_attribute(URI, &type);
+    if (st != P11_KIT_URI_OK) {
+        return SECFailure;
+    }
+    uristatus = p11_kit_uri_format(URI, P11_KIT_URI_FOR_OBJECT, &string);
+    if (uristatus == P11_KIT_URI_OK) {
+        printf("%s\n", string);
+        return SECSuccess;
+    }
+    return SECFailure;
+}
