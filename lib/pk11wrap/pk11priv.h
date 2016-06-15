@@ -46,6 +46,7 @@ CK_ULONG PK11_ReadULongAttribute(PK11SlotInfo *slot, CK_OBJECT_HANDLE id,
 char * PK11_MakeString(PLArenaPool *arena,char *space,char *staticSring,
 								int stringLen);
 int PK11_MapError(CK_RV error);
+int p11ToNSSError(CK_RV rv);
 CK_SESSION_HANDLE PK11_GetRWSession(PK11SlotInfo *slot);
 void PK11_RestoreROSession(PK11SlotInfo *slot,CK_SESSION_HANDLE rwsession);
 PRBool PK11_RWSessionHasLock(PK11SlotInfo *slot,

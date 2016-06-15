@@ -30,6 +30,7 @@ PK11_GetTokenUri(PK11SlotInfo *slot)
     SECStatus rv;
     P11KitUri *uri;
     char *result;
+    int status;
 
     uri = p11_kit_uri_new();
     if (!uri) {
@@ -41,22 +42,29 @@ PK11_GetTokenUri(PK11SlotInfo *slot)
 	    p11_kit_uri_free(uri);
 	    return NULL;
     }
-    if (p11_kit_uri_format(uri, P11_KIT_URI_FOR_TOKEN, &result)) {
-	    /*
-        * PORT_SetError(WTF?);
-        */
+    status = p11_kit_uri_format(uri, P11_KIT_URI_FOR_TOKEN, &result); 
+    if (p11ToNSSError(status) != 0) {
+        PORT_SetError(p11ToNSSError(status));
 	    result = NULL;
     }
+    //Set the uri for the token struct 
+
     p11_kit_uri_free(uri);
     return result;
 }
 
 SECStatus
 PK11_GetModuleURI(SECMODModule *module) {
-    P11KitUri *uri = p11_kit_uri_new();
+    P11KitUri *uri;
     CK_INFO *moduleinfo = p11_kit_uri_get_module_info(uri);
     char *string = NULL;
     SECStatus status;
+
+    uri = p11_kit_uri_new();
+    if (!uri) {
+        PORT_SetError(SEC_ERROR_NO_MEMORY);
+        return SECFailure;
+    }
 
     /*
     * This fills the module info into the CK_INFO_PTR passed
@@ -69,12 +77,22 @@ PK11_GetModuleURI(SECMODModule *module) {
     * Format the uri to string form
     */
     int uristatus = p11_kit_uri_format(uri, P11_KIT_URI_FOR_MODULE, &string);
-    if(uristatus == P11_KIT_URI_OK) {
+    if (p11ToNSSError(uristatus) != 0) {
+        PORT_SetError(p11ToNSSError(uristatus));
+        p11_kit_uri_free(uri);
+        return SECFailure;
+    } else {
         printf("%s\n", string);
+        if (!module->uri) {
+            module->uri = string;
+        }
+        p11_kit_uri_free(uri);
         return SECSuccess;
     }
+    p11_kit_uri_free(uri);
     return SECFailure;
 }
+
 
 SECStatus
 Fill_CK_ATTRIBUTE_Data(CK_ATTRIBUTE_PTR ptr, CK_ATTRIBUTE_TYPE type, CK_VOID_PTR value,  CK_ULONG ulValueLen) {
@@ -107,6 +125,7 @@ PK11_GetCertURI(CERTCertificate *cert) {
         PORT_SetError(SEC_ERROR_NO_MEMORY);
         return SECFailure;
     }
+    
     slot = cert->slot;
     rv = PK11_GetTokenInfo(slot, p11_kit_uri_get_token_info(uri));
     if (rv == SECFailure) {
@@ -121,7 +140,7 @@ PK11_GetCertURI(CERTCertificate *cert) {
     /*
     Setting values using external functions
     */
-    flag = Fill_CK_ATTRIBUTE_Data(&id, CKA_ID, &cert->subjectID, sizeof(cert->subjectID));
+    flag = Fill_CK_ATTRIBUTE_Data(&id, CKA_ID, (cert->subjectID.data), cert->subjectID.len);
     flag = Fill_CK_ATTRIBUTE_Data(&object, CKA_LABEL, &cert->nickname, sizeof(cert->nickname));
     flag = Fill_CK_ATTRIBUTE_Data(&type, CKA_CLASS, &class, sizeof(class));
     if (flag == SECFailure) {
@@ -135,14 +154,27 @@ PK11_GetCertURI(CERTCertificate *cert) {
     st = p11_kit_uri_set_attribute(uri, &id) && 
          p11_kit_uri_set_attribute(uri, &object) && 
          p11_kit_uri_set_attribute(uri, &type);
-    if (st != P11_KIT_URI_OK) {
+    if (p11ToNSSError(st) != 0) {
+        PORT_SetError(p11ToNSSError(st));
+        p11_kit_uri_free(uri);
         return SECFailure;
     }
+
     uristatus = p11_kit_uri_format(uri, P11_KIT_URI_FOR_OBJECT, &string);
-    if (uristatus == P11_KIT_URI_OK) {
+    if (p11ToNSSError(uristatus) != 0) {
+        PORT_SetError(p11ToNSSError(uristatus));
+        p11_kit_uri_free(uri);
+        return SECFailure;
+    } else {
+        if (!cert->uri) {
+            cert->uri = string;
+        }
         printf("%s\n", string);
+        p11_kit_uri_free(uri);
         return SECSuccess;
     }
+    
+    p11_kit_uri_free(uri);
     return SECFailure;
 }   
 
@@ -158,6 +190,7 @@ PK11_GetPrivateKeyURI(SECKEYPrivateKey *key) {
     CK_ATTRIBUTE type;
     char *string;
     char *nickname;
+    SECItem result;
     CK_OBJECT_CLASS class = CKO_PRIVATE_KEY;
 
 
@@ -172,11 +205,17 @@ PK11_GetPrivateKeyURI(SECKEYPrivateKey *key) {
         p11_kit_uri_free(URI);
         return SECFailure;
     }
-    nickname = PK11_GetObjectNickName(key->pkcs11Slot, key->pkcs11ID);
-    flag = Fill_CK_ATTRIBUTE_Data(&id, CKA_ID, &key->pkcs11ID, sizeof(key->pkcs11ID));
-    flag = Fill_CK_ATTRIBUTE_Data(&id, CKA_LABEL, &nickname, sizeof(nickname));    
+    /*
+    Get the SECItem for the CKA_LABEL of the key
+    */
+    rv = PK11_ReadAttribute(key->pcks11Slot, key->pkcs11ID, CKA_LABEL, NULL, &result);
+    
+    flag = Fill_CK_ATTRIBUTE_Data(&id, CKA_ID, &(key->pkcs11ID), sizeof(key->pkcs11ID));
+    flag = Fill_CK_ATTRIBUTE_Data(&id, CKA_LABEL, result.data, result.len);    
     flag = Fill_CK_ATTRIBUTE_Data(&id, CKA_CLASS, &class, sizeof(class));
     if (flag == SECFailure) {
+        PORT_SetError(SEC_ERROR_BAD_DATA);
+        p11_kit_uri_free(URI);
         return SECFailure;
     }
     /*
@@ -199,13 +238,22 @@ PK11_GetPrivateKeyURI(SECKEYPrivateKey *key) {
     st = p11_kit_uri_set_attribute(URI, &id) && 
          p11_kit_uri_set_attribute(URI, &object) && 
          p11_kit_uri_set_attribute(URI, &type);
-    if (st != P11_KIT_URI_OK) {
+    if (p11ToNSSError(st) != 0) {
+        PORT_SetError(p11ToNSSError(st));
+        p11_kit_uri_free(URI)
         return SECFailure;
     }
     uristatus = p11_kit_uri_format(URI, P11_KIT_URI_FOR_OBJECT, &string);
-    if (uristatus == P11_KIT_URI_OK) {
+    if (p11ToNSSError(uristatus) != 0) {
+        PORT_SetError(p11ToNSSError(uristatus));
+        p11_kit_uri_free(URI);
+        return SECFailure;
+    } else {
         printf("%s\n", string);
+        p11_kit_uri_free(URI);
         return SECSuccess;
     }
+    
+    p11_kit_uri_free(URI);
     return SECFailure;
 }
