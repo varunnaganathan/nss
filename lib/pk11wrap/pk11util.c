@@ -11,9 +11,16 @@
 #include "secmodti.h"
 #include "pk11func.h"
 #include "pki3hack.h"
+#include "secitem.h"
 #include "secerr.h"
 #include "dev.h"
+#include "dev3hack.h" 
+#include "pkim.h"
 #include "utilpars.h"
+
+/* Prevent p11-kit from including its own pkcs11.h */
+#define PKCS11_H 1
+#include <p11-kit/uri.h>
 
 /* these are for displaying error messages */
 
@@ -250,6 +257,104 @@ SECMOD_FindModuleByID(SECMODModuleID id)
 	PORT_SetError(SEC_ERROR_NO_MODULE);
     }
     return module;
+}
+
+/* 
+ * Find a module by its URI and return it
+*/
+SECMODModule *SECMOD_FindModuleByUri(char *uri)
+{
+    P11KitUri *URI = NULL;
+    SECMODModuleList *listnode;
+    SECMODModule *module = NULL;
+    int st;
+    SECStatus status;
+    CK_INFO moduleinfo;
+
+    st = p11_kit_uri_parse(uri, P11_KIT_URI_FOR_MODULE, URI);
+    if (p11ToNSSError(st) != 0)
+    {
+        PORT_SetError(p11ToNSSError(st));
+        return NULL;
+    }
+    if (!moduleLock) {
+        PORT_SetError(SEC_ERROR_NOT_INITIALIZED);
+        return module;
+    }
+    SECMOD_GetReadLock(moduleLock);
+    for(listnode =  modules; listnode != NULL; listnode = listnode->next)
+    {
+        SECMOD_ReleaseReadLock(moduleLock);
+        status = PK11_GetModInfo(listnode->module, &moduleinfo);
+        SECMOD_GetReadLock(moduleLock);
+        if (status != SECSuccess) {
+            SECMOD_ReleaseReadLock(moduleLock);
+            return NULL;
+        }
+        
+        if (p11_kit_uri_match_module_info(URI, &moduleinfo) == 1) {
+            module = listnode->module;
+            break;
+        }
+        
+    }
+    SECMOD_ReleaseReadLock(moduleLock);
+    if(!module)
+    {
+        return (SECMODModule *)NULL;
+    }
+    return module;
+}
+
+/*
+ * Get a modules URI ,and add it to its struct if not present
+*/
+char *
+PK11_GetModuleURI(SECMODModule *module) {
+    P11KitUri *uri;
+    CK_INFO *moduleinfo = p11_kit_uri_get_module_info(uri);
+    char *string = NULL;
+    SECStatus status;
+
+    if (!moduleLock) {
+        PORT_SetError(SEC_ERROR_NOT_INITIALIZED);
+        return NULL;
+    }
+    SECMOD_GetReadLock(moduleLock);
+    if (module->uri) {
+        SECMOD_ReleaseReadLock(moduleLock);
+        return module->uri;
+    }
+
+    uri = p11_kit_uri_new();
+    if (!uri) {
+        PORT_SetError(SEC_ERROR_NO_MEMORY);
+        SECMOD_ReleaseReadLock(moduleLock);
+        return NULL;
+    }
+
+    SECMOD_ReleaseReadLock(moduleLock);
+    //This fills the module info into the CK_INFO_PTR passed
+    status = PK11_GetModInfo(module, moduleinfo);
+    if (status == SECFailure) {
+        return NULL;
+    }
+
+    SECMOD_GetReadLock(moduleLock);
+    // Format the uri to string form
+    int uristatus = p11_kit_uri_format(uri, P11_KIT_URI_FOR_MODULE, &string);
+    if (uristatus != P11_KIT_URI_OK) {
+        PORT_SetError(p11ToNSSError(uristatus));
+        p11_kit_uri_free(uri);
+        SECMOD_ReleaseReadLock(moduleLock);
+        return NULL;
+    } else {
+        printf("%s\n", string);
+        module->uri = string;
+        p11_kit_uri_free(uri);
+        SECMOD_ReleaseReadLock(moduleLock);
+        return module->uri;
+    }
 }
 
 /*
