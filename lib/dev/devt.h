@@ -56,7 +56,7 @@ struct NSSTokenStr {
     PRIntervalTime lastTime;
     nssTokenObjectCache *cache;
     PK11SlotInfo *pk11slot;
-    char *uri
+    char *uri;
 };
 
 typedef enum {
