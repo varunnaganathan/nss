@@ -24,6 +24,7 @@
 #include <p11-kit/uri.h>
 
 
+/*
 char *
 PK11_GetTokenUri(PK11SlotInfo *slot)
 {
@@ -32,68 +33,94 @@ PK11_GetTokenUri(PK11SlotInfo *slot)
     char *result;
     int status;
 
+    PK11_EnterSlotMonitor(slot);
+    //Confirm that this is the token we actually need and not some other token
+    if (slot->nssToken->uri) {
+        PK11_ExitSlotMonitor(slot);
+        return slot->nssToken->uri;
+    }
     uri = p11_kit_uri_new();
     if (!uri) {
 	    PORT_SetError(SEC_ERROR_NO_MEMORY);
+        PK11_ExitSlotMonitor(slot);
 	    return NULL;
     }
+    
+    //Have to unlock to call PK11_GetTokenInfo
+    PK11_ExitSlotMonitor(slot)
     rv = PK11_GetTokenInfo(slot, p11_kit_uri_get_token_info(uri));
+    PK11_EnterSlotMonitor(slot);
     if (rv == SECFailure) {
 	    p11_kit_uri_free(uri);
+        PK11_ExitSlotMonitor(slot);
 	    return NULL;
     }
     status = p11_kit_uri_format(uri, P11_KIT_URI_FOR_TOKEN, &result); 
-    if (p11ToNSSError(status) != 0) {
+    if (status != P11_KIT_URI_OK) {
         PORT_SetError(p11ToNSSError(status));
 	    result = NULL;
     }
     //Set the uri for the token struct 
-
+    slot->nssToken->uri = result;
     p11_kit_uri_free(uri);
+    PK11_ExitSlotMonitor(slot);
     return result;
 }
+*/
 
-SECStatus
+char *
 PK11_GetModuleURI(SECMODModule *module) {
     P11KitUri *uri;
-    CK_INFO *moduleinfo = p11_kit_uri_get_module_info(uri);
+    CK_INFO *moduleinfo = NULL;
     char *string = NULL;
     SECStatus status;
+    SECMODListLock *moduleLock = NULL;
+
+    moduleLock = SECMOD_GetDefaultModuleListLock();
+    if (!moduleLock) {
+        PORT_SetError(SEC_ERROR_NOT_INITIALIZED);
+        return NULL;
+    }
+    SECMOD_GetReadLock(moduleLock);
+    if (module->uri) {
+        SECMOD_ReleaseReadLock(moduleLock);
+        return module->uri;
+    }
 
     uri = p11_kit_uri_new();
     if (!uri) {
         PORT_SetError(SEC_ERROR_NO_MEMORY);
-        return SECFailure;
+        SECMOD_ReleaseReadLock(moduleLock);
+        return NULL;
     }
 
-    /*
-    * This fills the module info into the CK_INFO_PTR passed
-    */
+    moduleinfo = p11_kit_uri_get_module_info(uri);
+    SECMOD_ReleaseReadLock(moduleLock);
+    //This fills the module info into the CK_INFO_PTR passed
     status = PK11_GetModInfo(module, moduleinfo);
     if (status == SECFailure) {
-        return SECFailure;
+        return NULL;
     }
-    /*
-    * Format the uri to string form
-    */
+
+    SECMOD_GetReadLock(moduleLock);
+    // Format the uri to string form
     int uristatus = p11_kit_uri_format(uri, P11_KIT_URI_FOR_MODULE, &string);
-    if (p11ToNSSError(uristatus) != 0) {
+    if (uristatus != P11_KIT_URI_OK) {
         PORT_SetError(p11ToNSSError(uristatus));
         p11_kit_uri_free(uri);
-        return SECFailure;
+        SECMOD_ReleaseReadLock(moduleLock);
+        return NULL;
     } else {
         printf("%s\n", string);
-        if (!module->uri) {
-            module->uri = string;
-        }
+        module->uri = string;
         p11_kit_uri_free(uri);
-        return SECSuccess;
+        SECMOD_ReleaseReadLock(moduleLock);
+        return module->uri;
     }
-    p11_kit_uri_free(uri);
-    return SECFailure;
 }
 
 
+/*
 SECStatus
 Fill_CK_ATTRIBUTE_Data(CK_ATTRIBUTE_PTR ptr, CK_ATTRIBUTE_TYPE type, CK_VOID_PTR value,  CK_ULONG ulValueLen) {
     if (!ptr) {
@@ -132,24 +159,21 @@ PK11_GetCertURI(CERTCertificate *cert) {
         p11_kit_uri_free(uri);
         return SECFailure;
     }
-    /*
-    Assigning the attributes of the CK_ATTRIBUTE Pointers
-    */
-
     
-    /*
-    Setting values using external functions
-    */
+    //Assigning the attributes of the CK_ATTRIBUTE Pointers
+
+    //Setting values using external functions
+    
     flag = Fill_CK_ATTRIBUTE_Data(&id, CKA_ID, (cert->subjectID.data), cert->subjectID.len);
     flag = Fill_CK_ATTRIBUTE_Data(&object, CKA_LABEL, &cert->nickname, sizeof(cert->nickname));
     flag = Fill_CK_ATTRIBUTE_Data(&type, CKA_CLASS, &class, sizeof(class));
     if (flag == SECFailure) {
         return SECFailure;
     }
-    /*
-    Better to use a function to set attributes.Once attribute assignment
-    verified, will switch to the external function
-    */
+    
+    //Better to use a function to set attributes.Once attribute assignment
+    //verified, will switch to the external function
+    
   
     st = p11_kit_uri_set_attribute(uri, &id) && 
          p11_kit_uri_set_attribute(uri, &object) && 
@@ -205,9 +229,8 @@ PK11_GetPrivateKeyURI(SECKEYPrivateKey *key) {
         p11_kit_uri_free(URI);
         return SECFailure;
     }
-    /*
-    Get the SECItem for the CKA_LABEL of the key
-    */
+    //Get the SECItem for the CKA_LABEL of the key
+    
     rv = PK11_ReadAttribute(key->pcks11Slot, key->pkcs11ID, CKA_LABEL, NULL, &result);
     
     flag = Fill_CK_ATTRIBUTE_Data(&id, CKA_ID, &(key->pkcs11ID), sizeof(key->pkcs11ID));
@@ -217,23 +240,7 @@ PK11_GetPrivateKeyURI(SECKEYPrivateKey *key) {
         PORT_SetError(SEC_ERROR_BAD_DATA);
         p11_kit_uri_free(URI);
         return SECFailure;
-    }
-    /*
-    Better to use a function to set attributes.Once attribute assignment
-    verified, will switch to the external function
-    
-    id.type = CKA_ID;
-    id.pValue = key->pkcs11ID;
-    id.ulValueLen = sizeof(key->pkcs11ID);
-    
-    object->type = CKA_LABEL;
-    object->pValue = nickname;//Have to assign this
-    object->ulValueLen = sizeof(nickname)//Have to assign this 
-
-    type->type=CKA_CLASS;
-    type->pValue = CKO_PRIVATE_KEY;
-    type->ulValueLen = sizeof(CKO_PRIVATE_KEY);
-    */
+    }    
 
     st = p11_kit_uri_set_attribute(URI, &id) && 
          p11_kit_uri_set_attribute(URI, &object) && 
@@ -257,3 +264,4 @@ PK11_GetPrivateKeyURI(SECKEYPrivateKey *key) {
     p11_kit_uri_free(URI);
     return SECFailure;
 }
+*/

@@ -1,10 +1,18 @@
-//Similar to SECMOD_FindModule
+/* 
+Similar to SECMOD_FindModule.Added to pk11util.c
+*/
+
+
 SECMODModule *SECMOD_FindModuleByUri(char *uri)
 {
     P11KitUri *URI = NULL;
     SECMODModuleList *listnode;
     SECMODModule *module = NULL;
     int st;
+    SECStatus status;
+    CK_INFO moduleinfo;
+    SECMODListLock *moduleLock = NULL;
+    SECMODModuleList *modules = NULL;
 
     st = p11_kit_uri_parse(uri, P11_KIT_URI_FOR_MODULE, URI);
     if (p11ToNSSError(st) != 0)
@@ -12,34 +20,33 @@ SECMODModule *SECMOD_FindModuleByUri(char *uri)
         PORT_SetError(p11ToNSSError(st));
         return NULL;
     }
-    /*
-    * Ask what this means.Copied because was present in SECMOD_FindModule
-    */
+
+    moduleLock = SECMOD_GetDefaultModuleListLock();
     if (!moduleLock) {
         PORT_SetError(SEC_ERROR_NOT_INITIALIZED);
+        return module;
+    }
+    modules = SECMOD_GetDefaultModuleList();
+    if (!modules) {
+        PORT_SetError(SEC_ERROR_NO_MODULE);
         return module;
     }
     SECMOD_GetReadLock(moduleLock);
     for(listnode =  modules; listnode != NULL; listnode = listnode->next)
     {
-        
-        /* Assuming we add a char *uri to the SECMODModule struct */
-        if (PORT_strcmp(listnode->module->uri, uri) == 0) {
-            module = listnode->module;
-            break;
-        }
-        /*
-        Old way of comparing
-        status = PK11_GetModInfo(listnode->module, moduleinfo);
+        SECMOD_ReleaseReadLock(moduleLock);
+        status = PK11_GetModInfo(listnode->module, &moduleinfo);
+        SECMOD_GetReadLock(moduleLock);
         if (status != SECSuccess) {
+            SECMOD_ReleaseReadLock(moduleLock);
             return NULL;
         }
         
-        if (p11_kit_uri_match_module_info(URI, moduleinfo) == 1) {
+        if (p11_kit_uri_match_module_info(URI, &moduleinfo) == 1) {
             module = listnode->module;
             break;
         }
-        */
+        
     }
     SECMOD_ReleaseReadLock(moduleLock);
     if(!module)
@@ -70,13 +77,13 @@ NSSTrustDomain_FindTokenByUri(NSSTrustDomain *td, char *uri)
          tok  = (NSSToken *)nssListIterator_Next(td->tokens))
     {
         if (nssToken_IsPresent(tok)) {
-            /* Assuming we add a char *uri to the NSSToken struct */
-            if (PORT_strcmp(tok->uri, uri) == 0) {
-                break;
-            }
-            /*
             slotinfo = tok->pk11slot;
+            /*
+             * Have to unlock to call PK11_GetTokenInfo
+            */
+            NSSRWLock_UnlockRead(td->tokensLock);
             status = PK11_GetTokenInfo(slotinfo, &tokeninfo);
+            NSSRWLock_LockRead(td->tokensLock);
             if(status == SECFailure) {
                 //Raise error
             }
@@ -84,14 +91,13 @@ NSSTrustDomain_FindTokenByUri(NSSTrustDomain *td, char *uri)
             {
                 break;
             }
-            */
         }
     }
     nssListIterator_Finish(td->tokens);
     NSSRWLock_UnlockRead(td->tokensLock);
     return tok;
 }
-
+/*
 //Similar to CERT_FindCertByKeyID
 CERTCertificate *
 CERT_FindCertByURI(CERTCertDBHandle *handle, SECItem *name, char *uri) {
@@ -105,7 +111,7 @@ CERT_FindCertByURI(CERTCertDBHandle *handle, SECItem *name, char *uri) {
     CK_ATTRIBUTE_PTR object;
     CK_ATTRIBUTE_PTR type;
 
-    /* Check the URI param being passed */
+    // Check the URI param being passed 
     uristatus = p11_kit_uri_parse(uri, P11_KIT_URI_FOR_OBJECT, URI);
     if (p11ToNSSError(uristatus) != 0) {
         PORT_SetError(p11ToNSSError(uristatus));
@@ -128,18 +134,13 @@ CERT_FindCertByURI(CERTCertDBHandle *handle, SECItem *name, char *uri) {
     node = head = CERT_LIST_HEAD(list);
     if (head) {
         do {
-            /* Assuming we add a char *uri to the CERTCertificate struct */
-            if (PORT_strcmp(node->cert->uri, uri) == 0) {
-                cert = CERT_DupCertificate(node->cert);
-                goto done;
-            }
-            /*
+            
             if (node->cert && SECITEM_ItemsAreEqual(&node->cert->subjectKeyID, id->pValue) &&
                 SECITEM_ItemsAreEqual(&node->cert->nickname, object->pValue)) {
                 cert = CERT_DupCertificate(node->cert);
                 goto done;
             }
-            */
+            
             node = CERT_LIST_NEXT(node);  
         } while (node && head != node);
     }
@@ -150,7 +151,8 @@ done:
     }
     return cert;
 }
-
+*/
+/*
 SECKEYPRivateKey *
 PK11_FindPrivateKeyByURI(PK11SlotInfo *slot, void *wincx, char *uri) {
     P11KitUri *URI;
@@ -174,3 +176,4 @@ PK11_FindPrivateKeyByURI(PK11SlotInfo *slot, void *wincx, char *uri) {
         return NULL;
     return resultKey;
 } 
+*/
