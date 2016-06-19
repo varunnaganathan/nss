@@ -24,7 +24,7 @@
 #include <p11-kit/uri.h>
 
 
-/*
+
 char *
 PK11_GetTokenUri(PK11SlotInfo *slot)
 {
@@ -66,7 +66,7 @@ PK11_GetTokenUri(PK11SlotInfo *slot)
     PK11_ExitSlotMonitor(slot);
     return result;
 }
-*/
+
 
 char *
 PK11_GetModuleURI(SECMODModule *module) {

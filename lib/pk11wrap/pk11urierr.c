@@ -6,7 +6,7 @@
 #define PKCS11_H 1
 #include <p11-kit/uri.h>
 
-int p11ToNSSError(CK_RV rv) {
+int P11_Kit_To_NSS_Error(CK_RV rv) {
 	switch(rv) {
 		case P11_KIT_URI_UNEXPECTED: {
 			return SEC_ERROR_PKCS11_FUNCTION_FAILED;
