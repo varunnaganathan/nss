@@ -5,7 +5,7 @@ Similar to SECMOD_FindModule.Added to pk11util.c
 
 SECMODModule *SECMOD_FindModuleByUri(char *uri)
 {
-    P11KitUri *URI = NULL;
+    P11KitUri *URI;
     SECMODModuleList *listnode;
     SECMODModule *module = NULL;
     int st;
@@ -14,10 +14,16 @@ SECMODModule *SECMOD_FindModuleByUri(char *uri)
     SECMODListLock *moduleLock = NULL;
     SECMODModuleList *modules = NULL;
 
+    URI = p11_kit_uri_new();
+    if (!uri) {
+        PORT_SetError(SEC_ERROR_NO_MEMORY);
+        return NULL;
+    }
+
     st = p11_kit_uri_parse(uri, P11_KIT_URI_FOR_MODULE, URI);
-    if (p11ToNSSError(st) != 0)
+    if (st != P11_KIT_URI_OK)
     {
-        PORT_SetError(p11ToNSSError(st));
+        PORT_SetError(P11_Kit_To_NSS_Error(st));
         return NULL;
     }
 
@@ -62,13 +68,21 @@ SECMODModule *SECMOD_FindModuleByUri(char *uri)
 NSS_IMPLEMENT NSSToken *
 NSSTrustDomain_FindTokenByUri(NSSTrustDomain *td, char *uri)
 {
-    P11KitUri *URI = NULL;
     int st;
+    P11KitUri *URI;
     NSSToken *tok = NULL;
+    SECStatus status;
+    PK11SlotInfo *slotinfo;
+    CK_TOKEN_INFO tokeninfo;
 
+    URI = p11_kit_uri_new();
+    if (!uri) {
+        PORT_SetError(SEC_ERROR_NO_MEMORY);
+        return NULL;
+    }
     st = p11_kit_uri_parse(uri, P11_KIT_URI_FOR_TOKEN, URI);
-    if(p11ToNSSError(st) != 0) {
-        PORT_SetError(p11ToNSSError(st));
+    if(st != P11_KIT_URI_OK) {
+        PORT_SetError(P11_Kit_To_NSS_Error(st));
         return NULL;
     }
     NSSRWLock_LockRead(td->tokensLock);
@@ -78,9 +92,9 @@ NSSTrustDomain_FindTokenByUri(NSSTrustDomain *td, char *uri)
     {
         if (nssToken_IsPresent(tok)) {
             slotinfo = tok->pk11slot;
-            /*
-             * Have to unlock to call PK11_GetTokenInfo
-            */
+            
+            //Have to unlock to call PK11_GetTokenInfo
+            
             NSSRWLock_UnlockRead(td->tokensLock);
             status = PK11_GetTokenInfo(slotinfo, &tokeninfo);
             NSSRWLock_LockRead(td->tokensLock);
@@ -97,6 +111,8 @@ NSSTrustDomain_FindTokenByUri(NSSTrustDomain *td, char *uri)
     NSSRWLock_UnlockRead(td->tokensLock);
     return tok;
 }
+
+
 /*
 //Similar to CERT_FindCertByKeyID
 CERTCertificate *

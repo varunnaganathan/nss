@@ -8,10 +8,6 @@
 
 int p11ToNSSError(CK_RV rv) {
 	switch(rv) {
-		case P11_KIT_URI_OK: {
-			return 0;
-			break;
-		}
 		case P11_KIT_URI_UNEXPECTED: {
 			return SEC_ERROR_PKCS11_FUNCTION_FAILED;
 			break;
@@ -36,6 +32,9 @@ int p11ToNSSError(CK_RV rv) {
 		case P11_KIT_URI_NOT_FOUND: {
 			return SEC_ERROR_PKCS11_FUNCTION_FAILED;
 			break;
+		}
+		default: {
+			return SEC_ERROR_BAD_DATA;
 		}
 
 	}

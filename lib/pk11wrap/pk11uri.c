@@ -47,7 +47,7 @@ PK11_GetTokenUri(PK11SlotInfo *slot)
     }
     
     //Have to unlock to call PK11_GetTokenInfo
-    PK11_ExitSlotMonitor(slot)
+    PK11_ExitSlotMonitor(slot);
     rv = PK11_GetTokenInfo(slot, p11_kit_uri_get_token_info(uri));
     PK11_EnterSlotMonitor(slot);
     if (rv == SECFailure) {
@@ -57,7 +57,7 @@ PK11_GetTokenUri(PK11SlotInfo *slot)
     }
     status = p11_kit_uri_format(uri, P11_KIT_URI_FOR_TOKEN, &result); 
     if (status != P11_KIT_URI_OK) {
-        PORT_SetError(p11ToNSSError(status));
+        PORT_SetError(P11_Kit_To_NSS_Error(status));
 	    result = NULL;
     }
     //Set the uri for the token struct 
@@ -93,7 +93,7 @@ PK11_GetModuleURI(SECMODModule *module) {
         SECMOD_ReleaseReadLock(moduleLock);
         return NULL;
     }
-
+    
     moduleinfo = p11_kit_uri_get_module_info(uri);
     SECMOD_ReleaseReadLock(moduleLock);
     //This fills the module info into the CK_INFO_PTR passed
@@ -106,7 +106,7 @@ PK11_GetModuleURI(SECMODModule *module) {
     // Format the uri to string form
     int uristatus = p11_kit_uri_format(uri, P11_KIT_URI_FOR_MODULE, &string);
     if (uristatus != P11_KIT_URI_OK) {
-        PORT_SetError(p11ToNSSError(uristatus));
+        PORT_SetError(P11_Kit_To_NSS_Error(uristatus));
         p11_kit_uri_free(uri);
         SECMOD_ReleaseReadLock(moduleLock);
         return NULL;
@@ -118,7 +118,6 @@ PK11_GetModuleURI(SECMODModule *module) {
         return module->uri;
     }
 }
-
 
 /*
 SECStatus
