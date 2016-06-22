@@ -63,13 +63,15 @@ PK11_DestroyTokenObject(PK11SlotInfo *slot,CK_OBJECT_HANDLE object) {
     SECStatus rv = SECSuccess;
     CK_SESSION_HANDLE rwsession;
 
-    
+    /* Free the URI of the token */
+    PORT_Free(slot->uri);
     rwsession = PK11_GetRWSession(slot);
     if (rwsession == CK_INVALID_SESSION) {
     	PORT_SetError(SEC_ERROR_BAD_DATA);
     	return SECFailure;
     }
 
+    PORT_Free(slot->uri);
     crv = PK11_GETTAB(slot)->C_DestroyObject(rwsession,object);
     if (crv != CKR_OK) {
 	rv = SECFailure;

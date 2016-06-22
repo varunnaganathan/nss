@@ -834,6 +834,8 @@ SECMOD_DestroyModule(SECMODModule *module)
 	}
 	PK11_FreeSlot(module->slots[i]);
     }
+    /* Free the URI string */
+    PORT_Free(module->uri);
     /* WARNING: once the last slot has been freed is it possible (even likely)
      * that module is no more... touching it now is a good way to go south */
 }

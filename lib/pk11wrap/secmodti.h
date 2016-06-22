@@ -110,6 +110,8 @@ struct PK11SlotInfoStr {
     NSSToken *nssToken;
     /* fast mechanism lookup */
     char mechanismBits[256];
+    /* URI string for the token */
+    char *uri;
 };
 
 /* Symetric Key structure. Reference Counted */

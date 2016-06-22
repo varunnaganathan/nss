@@ -83,6 +83,7 @@ NSSTrustDomain_FindTokenByUri(NSSTrustDomain *td, char *uri)
     st = p11_kit_uri_parse(uri, P11_KIT_URI_FOR_TOKEN, URI);
     if(st != P11_KIT_URI_OK) {
         PORT_SetError(P11_Kit_To_NSS_Error(st));
+        p11_kit_uri_free(URI);
         return NULL;
     }
     NSSRWLock_LockRead(td->tokensLock);
@@ -109,16 +110,17 @@ NSSTrustDomain_FindTokenByUri(NSSTrustDomain *td, char *uri)
     }
     nssListIterator_Finish(td->tokens);
     NSSRWLock_UnlockRead(td->tokensLock);
+    p11_kit_uri_free(URI);
     return tok;
 }
 
 
-/*
 //Similar to CERT_FindCertByKeyID
+/*
 CERTCertificate *
 CERT_FindCertByURI(CERTCertDBHandle *handle, SECItem *name, char *uri) {
     
-    P11KitUri *URI = NULL;
+    P11KitUri *URI;
     int uristatus;
     CERTCertList *list;
     CERTCertificate *cert = NULL;
@@ -127,10 +129,16 @@ CERT_FindCertByURI(CERTCertDBHandle *handle, SECItem *name, char *uri) {
     CK_ATTRIBUTE_PTR object;
     CK_ATTRIBUTE_PTR type;
 
+    URI = p11_kit_uri_new();
+    if (!uri) {
+        PORT_SetError(SEC_ERROR_NO_MEMORY);
+        return NULL;
+    }
     // Check the URI param being passed 
     uristatus = p11_kit_uri_parse(uri, P11_KIT_URI_FOR_OBJECT, URI);
-    if (p11ToNSSError(uristatus) != 0) {
-        PORT_SetError(p11ToNSSError(uristatus));
+    if (uristatus != P11_KIT_URI_OK) {
+        PORT_SetError(P11_Kit_To_NSS_Error(uristatus));
+        p11_kit_uri_free(URI);
         return (CERTCertificate *)NULL;
     }
 
@@ -140,19 +148,22 @@ CERT_FindCertByURI(CERTCertDBHandle *handle, SECItem *name, char *uri) {
 
     if( !id || !object || !type) {
         PORT_SetError(SEC_ERROR_CERT_NO_RESPONSE);
+        p11_kit_uri_free(URI);
         return (CERTCertificate *)NULL;
     }
 
     list = CERT_CreateSubjectCertList(NULL, handle, name, 0, PR_FALSE);
-    if (list == NULL)
+    if (list == NULL) {
+        p11_kit_uri_free(URI);
         return (CERTCertificate *)NULL;
+    }
     
     node = head = CERT_LIST_HEAD(list);
     if (head) {
         do {
             
             if (node->cert && SECITEM_ItemsAreEqual(&node->cert->subjectKeyID, id->pValue) &&
-                SECITEM_ItemsAreEqual(&node->cert->nickname, object->pValue)) {
+                (!PORT_Strcmp(node->cert->nickname, object->pValue))) {
                 cert = CERT_DupCertificate(node->cert);
                 goto done;
             }
@@ -165,10 +176,11 @@ done:
     if (list) {
         CERT_DestroyCertList(list);
     }
+    p11_kit_uri_free(URI);
     return cert;
 }
-*/
-/*
+
+
 SECKEYPRivateKey *
 PK11_FindPrivateKeyByURI(PK11SlotInfo *slot, void *wincx, char *uri) {
     P11KitUri *URI;
