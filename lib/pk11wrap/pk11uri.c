@@ -130,9 +130,7 @@ PK11_GetCertURI(CERTCertificate *cert) {
     char *string;
     CK_OBJECT_CLASS class = CKO_CERTIFICATE;
 
-    
-    //Confirm if this is the right locking function
-    
+    /* Confirm if this is the right locking function */
     CERT_LockCertRefCount(cert);
     if (cert->uri) {
         CERT_UnlockCertRefCount(cert);
@@ -158,18 +156,11 @@ PK11_GetCertURI(CERTCertificate *cert) {
         return NULL;
     }
     
-    //Assigning the attributes of the CK_ATTRIBUTE Pointers
-
-    //Setting values using external functions
-    //flag = Fill_CK_ATTRIBUTE_Data(&id, CKA_ID, (cert->subjectID.data), cert->subjectID.len);
+    /* Setting values of the attributes */
     CK_ATTRIBUTE id = {CKA_ID, (cert->subjectID.data), cert->subjectID.len };
     CK_ATTRIBUTE object = {CKA_LABEL, &cert->nickname, sizeof(cert->nickname) };
     CK_ATTRIBUTE type = {CKA_CLASS, &class, sizeof(class) };
     
-    //Better to use a function to set attributes.Once attribute assignment
-    //verified, will switch to the external function
-    
-  
     st = p11_kit_uri_set_attribute(uri, &id) && 
          p11_kit_uri_set_attribute(uri, &object) && 
          p11_kit_uri_set_attribute(uri, &type);

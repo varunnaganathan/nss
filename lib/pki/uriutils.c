@@ -133,7 +133,8 @@ CERT_FindCertByURI(CERTCertDBHandle *handle, SECItem *name, char *uri) {
         PORT_SetError(SEC_ERROR_NO_MEMORY);
         return NULL;
     }
-    // Check the URI param being passed 
+    
+    /* Check the URI param being passed */ 
     uristatus = p11_kit_uri_parse(uri, P11_KIT_URI_FOR_OBJECT, URI);
     if (uristatus != P11_KIT_URI_OK) {
         PORT_SetError(P11_Kit_To_NSS_Error(uristatus));
