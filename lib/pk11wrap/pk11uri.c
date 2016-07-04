@@ -121,29 +121,12 @@ PK11_GetModuleURI(SECMODModule *module) {
     }
 }
 
-
-SECStatus
-Fill_CK_ATTRIBUTE_Data(CK_ATTRIBUTE_PTR ptr, CK_ATTRIBUTE_TYPE type, CK_VOID_PTR value,  CK_ULONG ulValueLen) {
-    if (!ptr) {
-        return SECFailure;
-    }
-    ptr->type= type;
-    ptr->pValue = value;
-    ptr->ulValueLen = ulValueLen;
-    return SECSuccess;
-}
-
-/*
 char *
 PK11_GetCertURI(CERTCertificate *cert) {
     P11KitUri *uri;
     int st, uristatus;
     SECStatus rv;
-    SECStatus flag;
     PK11SlotInfo *slot = NULL;
-    CK_ATTRIBUTE id;
-    CK_ATTRIBUTE object;
-    CK_ATTRIBUTE type;
     char *string;
     CK_OBJECT_CLASS class = CKO_CERTIFICATE;
 
@@ -178,13 +161,10 @@ PK11_GetCertURI(CERTCertificate *cert) {
     //Assigning the attributes of the CK_ATTRIBUTE Pointers
 
     //Setting values using external functions
-    flag = Fill_CK_ATTRIBUTE_Data(&id, CKA_ID, (cert->subjectID.data), cert->subjectID.len);
-    flag = Fill_CK_ATTRIBUTE_Data(&object, CKA_LABEL, &cert->nickname, sizeof(cert->nickname));
-    flag = Fill_CK_ATTRIBUTE_Data(&type, CKA_CLASS, &class, sizeof(class));
-    if (flag == SECFailure) {
-        CERT_UnlockCertRefCount(cert);
-        return NULL;
-    }
+    //flag = Fill_CK_ATTRIBUTE_Data(&id, CKA_ID, (cert->subjectID.data), cert->subjectID.len);
+    CK_ATTRIBUTE id = {CKA_ID, (cert->subjectID.data), cert->subjectID.len };
+    CK_ATTRIBUTE object = {CKA_LABEL, &cert->nickname, sizeof(cert->nickname) };
+    CK_ATTRIBUTE type = {CKA_CLASS, &class, sizeof(class) };
     
     //Better to use a function to set attributes.Once attribute assignment
     //verified, will switch to the external function
@@ -214,6 +194,7 @@ PK11_GetCertURI(CERTCertificate *cert) {
     return string;
 }
 
+/*
 SECStatus
 PK11_GetPrivateKeyURI(SECKEYPrivateKey *key) {
     P11KitUri *URI;

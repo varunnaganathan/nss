@@ -116,7 +116,6 @@ NSSTrustDomain_FindTokenByUri(NSSTrustDomain *td, char *uri)
 
 
 //Similar to CERT_FindCertByKeyID
-/*
 CERTCertificate *
 CERT_FindCertByURI(CERTCertDBHandle *handle, SECItem *name, char *uri) {
     
@@ -180,7 +179,7 @@ done:
     return cert;
 }
 
-
+/*
 SECKEYPRivateKey *
 PK11_FindPrivateKeyByURI(PK11SlotInfo *slot, void *wincx, char *uri) {
     P11KitUri *URI;
