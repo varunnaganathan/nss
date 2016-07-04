@@ -180,28 +180,31 @@ done:
     return cert;
 }
 
-/*
-SECKEYPRivateKey *
+SECKEYPrivateKey *
 PK11_FindPrivateKeyByURI(PK11SlotInfo *slot, void *wincx, char *uri) {
     P11KitUri *URI;
-    //SECItem *keyID = NULL;
     CK_ATTRIBUTE *keyinfo = NULL;
-    SECKEYPRivateKey *resultKey = NULL;
+    SECKEYPrivateKey *resultKey = NULL;
     int uristatus;
 
+    URI = p11_kit_uri_new();
+    if (!uri) {
+        PORT_SetError(SEC_ERROR_NO_MEMORY);
+        return NULL;
+    }
+    
     uristatus = p11_kit_uri_parse(uri, P11_KIT_URI_FOR_OBJECT, URI);
-    if (p11ToNSSError(uristatus) != 0) {
-        PORT_SetError(p11ToNSSError(uristatus))
+    if (uristatus != P11_KIT_URI_OK) {
+        PORT_SetError(P11_Kit_To_NSS_Error(uristatus));
         return NULL;
     }
     keyinfo = p11_kit_uri_get_attribute(URI, CKA_ID);
     if (!keyinfo) {
         return NULL;
     }
-    //ask about this
-    resultKey = PK11_FindKeyByKeyID(slot, (SECItem *)keyinfo->pValue, wincx);
+    /* Ask about this */
+    resultKey = PK11_FindKeyByKeyID(slot, keyinfo->pValue, wincx);
     if (!resultKey)
         return NULL;
     return resultKey;
-} 
-*/
+}

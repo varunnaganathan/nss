@@ -230,6 +230,7 @@ struct SECKEYPrivateKeyStr {
     PRBool pkcs11IsTemp;       /* temp pkcs11 object, delete it when done */
     void *wincx;               /* context for errors and pw prompts */
     PRUint32 staticflags;      /* bit flag of cached PKCS#11 attributes */
+    char *uri;                 /* The URI for the Private Key */
 };
 typedef struct SECKEYPrivateKeyStr SECKEYPrivateKey;
 
