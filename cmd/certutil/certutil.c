@@ -579,6 +579,7 @@ ListCerts(CERTCertDBHandle *handle, char *nickname, char *email,
 	for (node = CERT_LIST_HEAD(list); !CERT_LIST_END(node, list);
 	     node = CERT_LIST_NEXT(node)) {
 	    SECU_PrintCertNickname(node, stdout);
+		printf("CertURI: %s\n", PK11_GetCertURI(node->cert));
 	}
 	CERT_DestroyCertList(list);
 	return SECSuccess;

@@ -1121,6 +1121,7 @@ PK11_InitToken(PK11SlotInfo *slot, PRBool loadCerts)
     /* set the slot flags to the current token values */
     slot->series++; /* allow other objects to detect that the 
 		      * slot is different */
+    slot->uri = NULL;
     slot->flags = tokenInfo.flags;
     slot->needLogin = ((tokenInfo.flags & CKF_LOGIN_REQUIRED) ? 
 							PR_TRUE : PR_FALSE);

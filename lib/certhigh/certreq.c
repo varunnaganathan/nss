@@ -67,6 +67,7 @@ CERT_CreateCertificate(unsigned long serialNumber,
         return 0;
     }
 
+    c->uri = NULL;
     c->referenceCount = 1;
     c->arena = arena;
 

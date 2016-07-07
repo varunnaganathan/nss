@@ -820,6 +820,7 @@ SECMOD_DestroyModule(SECMODModule *module)
 
     /* slots can't really disappear until our module starts freeing them,
      * so this check is safe */
+    PORT_Free(module->uri);
     slotCount = module->slotCount;
     if (slotCount == 0) {
 	SECMOD_SlotDestroyModule(module,PR_FALSE);

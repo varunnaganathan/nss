@@ -663,6 +663,7 @@ SECMOD_CreateModuleEx(const char *library, const char *moduleName,
     mod = secmod_NewModule();
     if (mod == NULL) return NULL;
 
+    mod->uri = NULL;
     mod->commonName = PORT_ArenaStrdup(mod->arena,moduleName ? moduleName : "");
     if (library) {
 	mod->dllName = PORT_ArenaStrdup(mod->arena,library);
