@@ -122,13 +122,14 @@ PK11_GetModuleURI(SECMODModule *module) {
 }
 
 char *
-PK11_GetCertURI(CERTCertificate *cert) {
+PK11_GetCertURI(CERTCertificate *cert, void *wincx) {
     P11KitUri *uri;
     int st, uristatus;
     SECStatus rv;
     PK11SlotInfo *slot = NULL;
     char *string;
     CK_OBJECT_CLASS class = CKO_CERTIFICATE;
+    CK_OBJECT_HANDLE certHandle;
 
     /* Confirm if this is the right locking function */
     CERT_LockCertRefCount(cert);
@@ -145,6 +146,13 @@ PK11_GetCertURI(CERTCertificate *cert) {
     }
     
     slot = cert->slot;
+    if (!slot) {
+	    certHandle = PK11_FindObjectForCert(cert, wincx, &slot);
+	    if (certHandle != CK_INVALID_HANDLE)
+		    PORT_SetError(SEC_ERROR_PKCS11_FUNCTION_FAILED);
+		    return NULL;
+    }
+
     
     CERT_UnlockCertRefCount(cert);
     rv = PK11_GetTokenInfo(slot, p11_kit_uri_get_token_info(uri));
@@ -157,11 +165,16 @@ PK11_GetCertURI(CERTCertificate *cert) {
     }
     
     /* Setting values of the attributes */
-    CK_ATTRIBUTE id = {CKA_ID, (cert->subjectID.data), cert->subjectID.len };
+    CK_ATTRIBUTE id = {CKA_LABEL, NULL, 0};
     CK_ATTRIBUTE object = {CKA_LABEL, cert->nickname, strlen(cert->nickname) };
     CK_ATTRIBUTE type = {CKA_CLASS, &class, sizeof(class) };
-    
-    if ((st = p11_kit_uri_set_attribute(uri, &id)) != P11_KIT_URI_OK ||
+
+    if (PK11_GetAttributes(NULL, slot, cert->pkcs11ID, &id, 1) == CKR_OK)
+	    st = p11_kit_uri_set_attribute(uri, &id);
+    else
+	    st = P11_KIT_URI_OK;
+
+    if (st != P11_KIT_URI_OK ||
 	(st = p11_kit_uri_set_attribute(uri, &type)) != P11_KIT_URI_OK ||
 	(st = p11_kit_uri_set_attribute(uri, &object)) != P11_KIT_URI_OK) {
         PORT_SetError(P11_Kit_To_NSS_Error(st));
