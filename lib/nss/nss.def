@@ -99,6 +99,7 @@ PK11_GenerateRandom;
 PK11_GenerateNewParam;
 PK11_GetAllTokens;
 PK11_GetBlockSize;
+PK11_GetCertURI;
 PK11_GetFirstSafe;
 PK11_GetInternalKeySlot;
 PK11_GetInternalSlot;
