@@ -771,8 +771,11 @@ CERT_DestroyCertificate(CERTCertificate *cert)
         } else if (cert->arena) {
             PORT_FreeArena(cert->arena, PR_FALSE);
         }
+	if (cert->uri) {
+	    PORT_Free(cert->uri);
+	    cert->uri = NULL;
+	}
     }
-    PORT_Free(cert->uri);
     return;
 }
 
