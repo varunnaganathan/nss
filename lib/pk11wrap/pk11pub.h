@@ -645,6 +645,7 @@ SECKEYPrivateKey * PK11_CopyTokenPrivKeyToSessionPrivKey(PK11SlotInfo *destSlot,
 /**********************************************************************
  *                   Certs
  **********************************************************************/
+char *PK11_GetCertURI(CERTCertificate *cert, void *wincx);
 SECItem *PK11_MakeIDFromPubKey(SECItem *pubKeyData);
 SECStatus PK11_TraverseSlotCerts(
      SECStatus(* callback)(CERTCertificate*,SECItem *,void *),
