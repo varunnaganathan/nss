@@ -158,20 +158,19 @@ PK11_GetCertURI(CERTCertificate *cert) {
     
     /* Setting values of the attributes */
     CK_ATTRIBUTE id = {CKA_ID, (cert->subjectID.data), cert->subjectID.len };
-    CK_ATTRIBUTE object = {CKA_LABEL, &cert->nickname, sizeof(cert->nickname) };
+    CK_ATTRIBUTE object = {CKA_LABEL, cert->nickname, strlen(cert->nickname) };
     CK_ATTRIBUTE type = {CKA_CLASS, &class, sizeof(class) };
     
-    st = p11_kit_uri_set_attribute(uri, &id) && 
-         p11_kit_uri_set_attribute(uri, &object) && 
-         p11_kit_uri_set_attribute(uri, &type);
-    if (st != P11_KIT_URI_OK) {
+    if ((st = p11_kit_uri_set_attribute(uri, &id)) != P11_KIT_URI_OK ||
+	(st = p11_kit_uri_set_attribute(uri, &type)) != P11_KIT_URI_OK ||
+	(st = p11_kit_uri_set_attribute(uri, &object)) != P11_KIT_URI_OK) {
         PORT_SetError(P11_Kit_To_NSS_Error(st));
         p11_kit_uri_free(uri);
         CERT_UnlockCertRefCount(cert);
         return NULL;
     }
 
-    uristatus = p11_kit_uri_format(uri, P11_KIT_URI_FOR_OBJECT, &string);
+    uristatus = p11_kit_uri_format(uri, P11_KIT_URI_FOR_OBJECT_ON_TOKEN, &string);
     if (uristatus != P11_KIT_URI_OK) {
         PORT_SetError(P11_Kit_To_NSS_Error(uristatus));
         p11_kit_uri_free(uri);
