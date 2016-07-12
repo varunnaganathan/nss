@@ -723,6 +723,7 @@ CERT_DecodeDERCertificate(SECItem *derSignedCert, PRBool copyDER,
         goto loser;
     }
 
+    cert->uri = NULL;
     cert->arena = arena;
 
     if (copyDER) {
