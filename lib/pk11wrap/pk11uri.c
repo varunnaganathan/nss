@@ -165,7 +165,7 @@ PK11_GetCertURI(CERTCertificate *cert, void *wincx) {
     }
     
     /* Setting values of the attributes */
-    CK_ATTRIBUTE id = {CKA_LABEL, NULL, 0};
+    CK_ATTRIBUTE id = {CKA_ID, NULL, 0};
     CK_ATTRIBUTE object = {CKA_LABEL, cert->nickname, strlen(cert->nickname) };
     CK_ATTRIBUTE type = {CKA_CLASS, &class, sizeof(class) };
 
