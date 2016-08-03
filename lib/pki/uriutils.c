@@ -202,3 +202,39 @@ PK11_FindPrivateKeyByURI(PK11SlotInfo *slot, void *wincx, char *uri) {
     return peerID;
 }
 
+CK_OBJECT_HANDLE *
+PK11_FindPrivateKeyByURI(PK11SlotInfo *slot, void *wincx, char *uri) {
+    P11KitUri *URI;
+    //CK_ATTRIBUTE attrs[3];
+    int uristatus, objcount;
+    //CK_ATTRIBUTE_PTR Id, Object;
+    CK_ATTRIBUTE_PTR attributes;
+    CK_ULONG numattrs, i;
+    //CK_OBJECT_CLASS certclass = CKO_PRIVATE_KEY;
+    CK_ATTRIBUTE *theTemplate;
+    //CK_ATTRIBUTE *attr = theTemplate;
+    CK_OBJECT_HANDLE *peerID;
+
+    URI = p11_kit_uri_new();
+    if (!uri) {
+        PORT_SetError(SEC_ERROR_NO_MEMORY);
+        return CK_INVALID_HANDLE;
+    }
+    
+    uristatus = p11_kit_uri_parse(uri, P11_KIT_URI_FOR_OBJECT_ON_TOKEN, URI);
+    if (uristatus != P11_KIT_URI_OK) {
+        PORT_SetError(P11_Kit_To_NSS_Error(uristatus));
+        return CK_INVALID_HANDLE;
+    }
+
+    attributes = p11_kit_uri_get_attributes(URI,&numattrs);
+    theTemplate = malloc(sizeof(CK_ATTRIBUTE)*numattrs);
+    for (i=0; i<numattrs; i++) {
+        CK_ATTRIBUTE temp =  {attributes[i].type, attributes[i].pValue, attributes[i].ulValueLen};
+        theTemplate[i] = temp;
+    }
+
+    peerID = pk11_FindObjectsByTemplate(slot, theTemplate, numattrs, &objcount);
+    free(theTemplate);
+    return peerID;
+}
