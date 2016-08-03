@@ -204,10 +204,10 @@ PK11_GetPrivateKeyURI(SECKEYPrivateKey *key) {
     SECStatus rv;
     PK11SlotInfo *slot = NULL;
     char *string;
-    SECItem result;
+    //  SECItem result;
     CK_OBJECT_CLASS class = CKO_PRIVATE_KEY;
 
-    /* Find the appropriate locking function for a Private key */
+    /* Find the appropriate locking function for a key */
     if (key->uri) {
         return key->uri;
     }
@@ -225,22 +225,26 @@ PK11_GetPrivateKeyURI(SECKEYPrivateKey *key) {
         return NULL;
     }
     /* Get the SECItem for the CKA_LABEL of the key */
-    rv = PK11_ReadAttribute(key->pkcs11Slot, key->pkcs11ID, CKA_LABEL, NULL, &result);
+    //rv = PK11_ReadAttribute(key->pkcs11Slot, key->pkcs11ID, CKA_LABEL, NULL, &result);
     
     /* Assign the attributes of the URI */
     CK_ATTRIBUTE id = { CKA_ID, &(key->pkcs11ID), sizeof(key->pkcs11ID) };
-    CK_ATTRIBUTE object = { CKA_LABEL, result.data, result.len };    
+    //CK_ATTRIBUTE object = { CKA_LABEL, result.data, result.len };    
+    CK_ATTRIBUTE object = {CKA_LABEL, NULL, 0};
     CK_ATTRIBUTE type = { CKA_CLASS, &class, sizeof(class) };
+    if (PK11_GetAttributes(NULL, slot, key->pkcs11ID, &object, 1) != CKR_OK) {
+        return NULL;
+    }
     
-    st = p11_kit_uri_set_attribute(URI, &id) && 
-         p11_kit_uri_set_attribute(URI, &object) && 
-         p11_kit_uri_set_attribute(URI, &type);
-    if (st != P11_KIT_URI_OK) {
+    if ((st = p11_kit_uri_set_attribute(URI, &id)) != P11_KIT_URI_OK || 
+        (st = p11_kit_uri_set_attribute(URI, &object)) != P11_KIT_URI_OK || 
+        (st =p11_kit_uri_set_attribute(URI, &type)) != P11_KIT_URI_OK) {
         PORT_SetError(P11_Kit_To_NSS_Error(st));
         p11_kit_uri_free(URI);
         return NULL;
     }
-    uristatus = p11_kit_uri_format(URI, P11_KIT_URI_FOR_OBJECT, &string);
+
+    uristatus = p11_kit_uri_format(URI, P11_KIT_URI_FOR_OBJECT_ON_TOKEN, &string);
     if (uristatus != P11_KIT_URI_OK) {
         PORT_SetError(P11_Kit_To_NSS_Error(uristatus));
         p11_kit_uri_free(URI);
