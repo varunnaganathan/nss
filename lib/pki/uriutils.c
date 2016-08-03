@@ -114,70 +114,55 @@ NSSTrustDomain_FindTokenByUri(NSSTrustDomain *td, char *uri)
     return tok;
 }
 
-
-//Similar to CERT_FindCertByKeyID
-CERTCertificate *
-CERT_FindCertByURI(CERTCertDBHandle *handle, SECItem *name, char *uri) {
-    
+CK_OBJECT_HANDLE *CERT_FindCertByURI(PK11SlotInfo *slot, void *wincx, char *uri) {
     P11KitUri *URI;
-    int uristatus;
-    CERTCertList *list;
-    CERTCertificate *cert = NULL;
-    CERTCertListNode *node, *head;
-    CK_ATTRIBUTE_PTR id;
-    CK_ATTRIBUTE_PTR object;
-    CK_ATTRIBUTE_PTR type;
+    //CK_ATTRIBUTE attrs[3];
+    int uristatus, objcount;
+    //CK_ATTRIBUTE_PTR Id, Object;
+    CK_ATTRIBUTE_PTR attributes;
+    CK_ULONG numattrs, i;
+    //CK_OBJECT_CLASS certclass = CKO_CERTIFICATE;
+    CK_ATTRIBUTE *theTemplate;
+    //{ CKA_ID, NULL, 0 },
+    //{ CKA_LABEL, NULL, 0 },
+    //{ CKA_CLASS, NULL, 0 },
+    //};
+    //int tsize = sizeof(theTemplate)/sizeof(theTemplate[0]);
+    //CK_ATTRIBUTE *attr = theTemplate;
+    CK_OBJECT_HANDLE *peerID;
 
     URI = p11_kit_uri_new();
     if (!uri) {
         PORT_SetError(SEC_ERROR_NO_MEMORY);
-        return NULL;
+        return CK_INVALID_HANDLE;
     }
     
-    /* Check the URI param being passed */ 
-    uristatus = p11_kit_uri_parse(uri, P11_KIT_URI_FOR_OBJECT, URI);
+    uristatus = p11_kit_uri_parse(uri, P11_KIT_URI_FOR_OBJECT_ON_TOKEN, URI);
     if (uristatus != P11_KIT_URI_OK) {
         PORT_SetError(P11_Kit_To_NSS_Error(uristatus));
-        p11_kit_uri_free(URI);
-        return (CERTCertificate *)NULL;
+        return CK_INVALID_HANDLE;
     }
 
-    id = p11_kit_uri_get_attribute(URI,CKA_ID);
-    object = p11_kit_uri_get_attribute(URI,CKA_LABEL);
-    type = p11_kit_uri_get_attribute(URI,CKA_CLASS);
+    attributes = p11_kit_uri_get_attributes(URI,&numattrs);
+    theTemplate = malloc(sizeof(CK_ATTRIBUTE)*numattrs);
+    for (i=0; i<numattrs; i++) {
+        CK_ATTRIBUTE temp =  {attributes[i].type, attributes[i].pValue, attributes[i].ulValueLen};
+        theTemplate[i] = temp;
+    }
+    //int tsize = sizeof(theTemplate)/sizeof(theTemplate[0]);
 
-    if( !id || !object || !type) {
-        PORT_SetError(SEC_ERROR_CERT_NO_RESPONSE);
-        p11_kit_uri_free(URI);
-        return (CERTCertificate *)NULL;
-    }
+    //Id = p11_kit_uri_get_attribute(URI, CKA_ID);
+    //Object = p11_kit_uri_get_attribute(URI, CKA_LABEL);
+    //Type = p11_kit_uri_get_attribute(URI, CKA_CLASS);
 
-    list = CERT_CreateSubjectCertList(NULL, handle, name, 0, PR_FALSE);
-    if (list == NULL) {
-        p11_kit_uri_free(URI);
-        return (CERTCertificate *)NULL;
-    }
-    
-    node = head = CERT_LIST_HEAD(list);
-    if (head) {
-        do {
-            
-            if (node->cert && SECITEM_ItemsAreEqual(&node->cert->subjectKeyID, id->pValue) &&
-                (!PORT_Strcmp(node->cert->nickname, object->pValue))) {
-                cert = CERT_DupCertificate(node->cert);
-                goto done;
-            }
-            
-            node = CERT_LIST_NEXT(node);  
-        } while (node && head != node);
-    }
-    PORT_SetError(SEC_ERROR_UNKNOWN_ISSUER);
-done:
-    if (list) {
-        CERT_DestroyCertList(list);
-    }
-    p11_kit_uri_free(URI);
-    return cert;
+    //PK11_SETATTRS(attr,CKA_ID, Id->pValue, Id->ulValueLen);attr++;
+    //PK11_SETATTRS(attr,CKA_LABEL,Object->pValue,Object->ulValueLen);attr++;
+    //PK11_SETATTRS(attr,CKA_CLASS,&certclass,sizeof(certclass));
+
+    peerID = pk11_FindObjectsByTemplate(slot, theTemplate, numattrs, &objcount);
+    free(theTemplate);
+    return peerID;
+
 }
 
 SECKEYPrivateKey *
