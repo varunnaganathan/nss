@@ -153,6 +153,15 @@ __CERT_NewTempCertificate;
 __PK11_CreateContextByRawKey;
 __PK11_GetKeyData;
 __nss_InitLock;
+PK11_GetCertURI;
+PK11_GetPrivateKeyURI;
+PK11_GetPublicKeyURI;
+PK11_GetModuleURI;
+PK11_FindPrivateKeyByURI;
+PK11_FindPublicKeyByURI;
+SECMOD_FindModuleByUri
+NSSTrustDomain_FindTokenByUri
+CERT_FindCertByURI;
 CERT_CertChainFromCert;
 CERT_DestroyCertificateList;
 CERT_DupCertList;
