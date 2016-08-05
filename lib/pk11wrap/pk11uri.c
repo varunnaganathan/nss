@@ -34,7 +34,6 @@ PK11_GetTokenUri(PK11SlotInfo *slot)
     int status;
 
     PK11_EnterSlotMonitor(slot);
-    //Confirm that this is the token we actually need and not some other token
     if (slot->uri) {
         PK11_ExitSlotMonitor(slot);
         return slot->uri;
@@ -46,7 +45,9 @@ PK11_GetTokenUri(PK11SlotInfo *slot)
 	    return NULL;
     }
     
-    //Have to unlock to call PK11_GetTokenInfo
+    /* 
+     Have to unlock to call PK11_GetTokenInfo
+    */
     PK11_ExitSlotMonitor(slot);
     rv = PK11_GetTokenInfo(slot, p11_kit_uri_get_token_info(uri));
     PK11_EnterSlotMonitor(slot);
@@ -60,7 +61,9 @@ PK11_GetTokenUri(PK11SlotInfo *slot)
         PORT_SetError(P11_Kit_To_NSS_Error(status));
 	    result = NULL;
     }
-    //Set the uri for the token struct 
+    /*
+     Set the uri for the token struct 
+    */
     slot->uri = result;
     p11_kit_uri_free(uri);
     PK11_ExitSlotMonitor(slot);
@@ -69,7 +72,7 @@ PK11_GetTokenUri(PK11SlotInfo *slot)
 
 
 char *
-PK11_GetModuleURI(SECMODModule *module) {
+SECMOD_GetModuleURI(SECMODModule *module) {
     P11KitUri *uri;
     CK_INFO *moduleinfo = NULL;
     char *string = NULL;
@@ -98,14 +101,18 @@ PK11_GetModuleURI(SECMODModule *module) {
     
     moduleinfo = p11_kit_uri_get_module_info(uri);
     SECMOD_ReleaseWriteLock(moduleLock);
-    //This fills the module info into the CK_INFO_PTR passed
+    /*
+    This fills the module info into the CK_INFO_PTR passed
+    */
     status = PK11_GetModInfo(module, moduleinfo);
     if (status == SECFailure) {
         return NULL;
     }
 
     SECMOD_GetWriteLock(moduleLock);
-    // Format the uri to string form
+    /*
+     Format the uri to string form
+    */
     int uristatus = p11_kit_uri_format(uri, P11_KIT_URI_FOR_MODULE, &string);
     if (uristatus != P11_KIT_URI_OK) {
         PORT_SetError(P11_Kit_To_NSS_Error(uristatus));
@@ -122,7 +129,7 @@ PK11_GetModuleURI(SECMODModule *module) {
 }
 
 char *
-PK11_GetCertURI(CERTCertificate *cert, void *wincx) {
+CERT_GetCertURI(CERTCertificate *cert, void *wincx) {
     P11KitUri *uri;
     int st, uristatus;
     SECStatus rv;
@@ -131,7 +138,6 @@ PK11_GetCertURI(CERTCertificate *cert, void *wincx) {
     CK_OBJECT_CLASS class = CKO_CERTIFICATE;
     CK_OBJECT_HANDLE certHandle;
 
-    /* Confirm if this is the right locking function */
     CERT_LockCertRefCount(cert);
     if (cert->uri) {
         CERT_UnlockCertRefCount(cert);
@@ -164,7 +170,9 @@ PK11_GetCertURI(CERTCertificate *cert, void *wincx) {
         return NULL;
     }
     
-    /* Setting values of the attributes */
+    /* 
+     Setting values of the attributes
+    */
     CK_ATTRIBUTE id = {CKA_ID, NULL, 0};
     CK_ATTRIBUTE object = {CKA_LABEL, cert->nickname, strlen(cert->nickname) };
     CK_ATTRIBUTE type = {CKA_CLASS, &class, sizeof(class) };
@@ -204,10 +212,11 @@ PK11_GetPrivateKeyURI(SECKEYPrivateKey *key) {
     SECStatus rv;
     PK11SlotInfo *slot = NULL;
     char *string;
-    //  SECItem result;
     CK_OBJECT_CLASS class = CKO_PRIVATE_KEY;
 
-    /* Find the appropriate locking function for a key */
+    /* 
+     Find the appropriate locking function for a key
+    */
     if (key->uri) {
         return key->uri;
     }
@@ -224,12 +233,11 @@ PK11_GetPrivateKeyURI(SECKEYPrivateKey *key) {
         p11_kit_uri_free(URI);
         return NULL;
     }
-    /* Get the SECItem for the CKA_LABEL of the key */
-    //rv = PK11_ReadAttribute(key->pkcs11Slot, key->pkcs11ID, CKA_LABEL, NULL, &result);
-    
-    /* Assign the attributes of the URI */
-    CK_ATTRIBUTE id = { CKA_ID, &(key->pkcs11ID), sizeof(key->pkcs11ID) };
-    //CK_ATTRIBUTE object = { CKA_LABEL, result.data, result.len };    
+
+    /* 
+     Assign the attributes of the URI 
+    */
+    CK_ATTRIBUTE id = { CKA_ID, &(key->pkcs11ID), sizeof(key->pkcs11ID) };    
     CK_ATTRIBUTE object = {CKA_LABEL, NULL, 0};
     CK_ATTRIBUTE type = { CKA_CLASS, &class, sizeof(class) };
     if (PK11_GetAttributes(NULL, slot, key->pkcs11ID, &object, 1) != CKR_OK) {
@@ -267,7 +275,9 @@ PK11_GetPublicKeyURI(SECKEYPublicKey *key) {
     SECItem result;
     CK_OBJECT_CLASS class = CKO_PUBLIC_KEY;
 
-    /* Find the appropriate locking function for a key */
+    /* 
+     Find the appropriate locking function for a key 
+    */
     if (key->uri) {
         return key->uri;
     }
@@ -284,10 +294,14 @@ PK11_GetPublicKeyURI(SECKEYPublicKey *key) {
         p11_kit_uri_free(URI);
         return NULL;
     }
-    /* Get the SECItem for the CKA_LABEL of the key */
+    /*
+    Get the SECItem for the CKA_LABEL of the key
+    */
     rv = PK11_ReadAttribute(key->pkcs11Slot, key->pkcs11ID, CKA_LABEL, NULL, &result);
     
-    /* Assign the attributes of the URI */
+    /* 
+     Assign the attributes of the URI 
+    */
     CK_ATTRIBUTE id = { CKA_ID, &(key->pkcs11ID), sizeof(key->pkcs11ID) };
     CK_ATTRIBUTE object = { CKA_LABEL, result.data, result.len };    
     CK_ATTRIBUTE type = { CKA_CLASS, &class, sizeof(class) };

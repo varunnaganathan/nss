@@ -21,8 +21,7 @@ SECMODModule *SECMOD_FindModuleByUri(char *uri)
     }
 
     st = p11_kit_uri_parse(uri, P11_KIT_URI_FOR_MODULE, URI);
-    if (st != P11_KIT_URI_OK)
-    {
+    if (st != P11_KIT_URI_OK) {
         PORT_SetError(P11_Kit_To_NSS_Error(st));
         return NULL;
     }
@@ -38,8 +37,7 @@ SECMODModule *SECMOD_FindModuleByUri(char *uri)
         return module;
     }
     SECMOD_GetReadLock(moduleLock);
-    for(listnode =  modules; listnode != NULL; listnode = listnode->next)
-    {
+    for(listnode =  modules; listnode != NULL; listnode = listnode->next) {
         SECMOD_ReleaseReadLock(moduleLock);
         status = PK11_GetModInfo(listnode->module, &moduleinfo);
         SECMOD_GetReadLock(moduleLock);
@@ -55,8 +53,7 @@ SECMODModule *SECMOD_FindModuleByUri(char *uri)
         
     }
     SECMOD_ReleaseReadLock(moduleLock);
-    if(!module)
-    {
+    if(!module) {
         return (SECMODModule *)NULL;
     }
     return module;
@@ -102,8 +99,7 @@ NSSTrustDomain_FindTokenByUri(NSSTrustDomain *td, char *uri)
             if(status == SECFailure) {
                 //Raise error
             }
-            if (p11_kit_uri_match_token_info(URI, &tokeninfo) == 1)
-            {
+            if (p11_kit_uri_match_token_info(URI, &tokeninfo) == 1) {
                 break;
             }
         }
@@ -114,68 +110,13 @@ NSSTrustDomain_FindTokenByUri(NSSTrustDomain *td, char *uri)
     return tok;
 }
 
-CK_OBJECT_HANDLE *CERT_FindCertByURI(PK11SlotInfo *slot, void *wincx, char *uri) {
-    P11KitUri *URI;
-    //CK_ATTRIBUTE attrs[3];
-    int uristatus, objcount;
-    //CK_ATTRIBUTE_PTR Id, Object;
-    CK_ATTRIBUTE_PTR attributes;
-    CK_ULONG numattrs, i;
-    //CK_OBJECT_CLASS certclass = CKO_CERTIFICATE;
-    CK_ATTRIBUTE *theTemplate;
-    //{ CKA_ID, NULL, 0 },
-    //{ CKA_LABEL, NULL, 0 },
-    //{ CKA_CLASS, NULL, 0 },
-    //};
-    //int tsize = sizeof(theTemplate)/sizeof(theTemplate[0]);
-    //CK_ATTRIBUTE *attr = theTemplate;
-    CK_OBJECT_HANDLE *peerID;
-
-    URI = p11_kit_uri_new();
-    if (!uri) {
-        PORT_SetError(SEC_ERROR_NO_MEMORY);
-        return CK_INVALID_HANDLE;
-    }
-    
-    uristatus = p11_kit_uri_parse(uri, P11_KIT_URI_FOR_OBJECT_ON_TOKEN, URI);
-    if (uristatus != P11_KIT_URI_OK) {
-        PORT_SetError(P11_Kit_To_NSS_Error(uristatus));
-        return CK_INVALID_HANDLE;
-    }
-
-    attributes = p11_kit_uri_get_attributes(URI,&numattrs);
-    theTemplate = malloc(sizeof(CK_ATTRIBUTE)*numattrs);
-    for (i=0; i<numattrs; i++) {
-        CK_ATTRIBUTE temp =  {attributes[i].type, attributes[i].pValue, attributes[i].ulValueLen};
-        theTemplate[i] = temp;
-    }
-    //int tsize = sizeof(theTemplate)/sizeof(theTemplate[0]);
-
-    //Id = p11_kit_uri_get_attribute(URI, CKA_ID);
-    //Object = p11_kit_uri_get_attribute(URI, CKA_LABEL);
-    //Type = p11_kit_uri_get_attribute(URI, CKA_CLASS);
-
-    //PK11_SETATTRS(attr,CKA_ID, Id->pValue, Id->ulValueLen);attr++;
-    //PK11_SETATTRS(attr,CKA_LABEL,Object->pValue,Object->ulValueLen);attr++;
-    //PK11_SETATTRS(attr,CKA_CLASS,&certclass,sizeof(certclass));
-
-    peerID = pk11_FindObjectsByTemplate(slot, theTemplate, numattrs, &objcount);
-    free(theTemplate);
-    return peerID;
-
-}
-
 CK_OBJECT_HANDLE *
-PK11_FindPrivateKeyByURI(PK11SlotInfo *slot, void *wincx, char *uri) {
+CERT_FindCertByURI(PK11SlotInfo *slot, void *wincx, char *uri) {
     P11KitUri *URI;
-    //CK_ATTRIBUTE attrs[3];
     int uristatus, objcount;
-    //CK_ATTRIBUTE_PTR Id, Object;
     CK_ATTRIBUTE_PTR attributes;
     CK_ULONG numattrs, i;
-    //CK_OBJECT_CLASS certclass = CKO_PRIVATE_KEY;
     CK_ATTRIBUTE *theTemplate;
-    //CK_ATTRIBUTE *attr = theTemplate;
     CK_OBJECT_HANDLE *peerID;
 
     URI = p11_kit_uri_new();
@@ -196,7 +137,6 @@ PK11_FindPrivateKeyByURI(PK11SlotInfo *slot, void *wincx, char *uri) {
         CK_ATTRIBUTE temp =  {attributes[i].type, attributes[i].pValue, attributes[i].ulValueLen};
         theTemplate[i] = temp;
     }
-
     peerID = pk11_FindObjectsByTemplate(slot, theTemplate, numattrs, &objcount);
     free(theTemplate);
     return peerID;
@@ -205,14 +145,10 @@ PK11_FindPrivateKeyByURI(PK11SlotInfo *slot, void *wincx, char *uri) {
 CK_OBJECT_HANDLE *
 PK11_FindPrivateKeyByURI(PK11SlotInfo *slot, void *wincx, char *uri) {
     P11KitUri *URI;
-    //CK_ATTRIBUTE attrs[3];
     int uristatus, objcount;
-    //CK_ATTRIBUTE_PTR Id, Object;
     CK_ATTRIBUTE_PTR attributes;
     CK_ULONG numattrs, i;
-    //CK_OBJECT_CLASS certclass = CKO_PRIVATE_KEY;
     CK_ATTRIBUTE *theTemplate;
-    //CK_ATTRIBUTE *attr = theTemplate;
     CK_OBJECT_HANDLE *peerID;
 
     URI = p11_kit_uri_new();
@@ -233,7 +169,38 @@ PK11_FindPrivateKeyByURI(PK11SlotInfo *slot, void *wincx, char *uri) {
         CK_ATTRIBUTE temp =  {attributes[i].type, attributes[i].pValue, attributes[i].ulValueLen};
         theTemplate[i] = temp;
     }
+    peerID = pk11_FindObjectsByTemplate(slot, theTemplate, numattrs, &objcount);
+    free(theTemplate);
+    return peerID;
+}
 
+CK_OBJECT_HANDLE *
+PK11_FindPrivateKeyByURI(PK11SlotInfo *slot, void *wincx, char *uri) {
+    P11KitUri *URI;
+    int uristatus, objcount;
+    CK_ATTRIBUTE_PTR attributes;
+    CK_ULONG numattrs, i;
+    CK_ATTRIBUTE *theTemplate;
+    CK_OBJECT_HANDLE *peerID;
+
+    URI = p11_kit_uri_new();
+    if (!uri) {
+        PORT_SetError(SEC_ERROR_NO_MEMORY);
+        return CK_INVALID_HANDLE;
+    }
+    
+    uristatus = p11_kit_uri_parse(uri, P11_KIT_URI_FOR_OBJECT_ON_TOKEN, URI);
+    if (uristatus != P11_KIT_URI_OK) {
+        PORT_SetError(P11_Kit_To_NSS_Error(uristatus));
+        return CK_INVALID_HANDLE;
+    }
+
+    attributes = p11_kit_uri_get_attributes(URI,&numattrs);
+    theTemplate = malloc(sizeof(CK_ATTRIBUTE)*numattrs);
+    for (i=0; i<numattrs; i++) {
+        CK_ATTRIBUTE temp =  {attributes[i].type, attributes[i].pValue, attributes[i].ulValueLen};
+        theTemplate[i] = temp;
+    }
     peerID = pk11_FindObjectsByTemplate(slot, theTemplate, numattrs, &objcount);
     free(theTemplate);
     return peerID;
