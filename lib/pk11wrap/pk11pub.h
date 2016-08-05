@@ -140,7 +140,7 @@ PRBool PK11_TokenExists(CK_MECHANISM_TYPE);
 SECStatus PK11_GetModInfo(SECMODModule *mod, CK_INFO *info);
 PRBool PK11_IsFIPS(void);
 SECMODModule *PK11_GetModule(PK11SlotInfo *slot);
-char *PK11_GetModuleURI(SECMODModule *module);
+char *SECMOD_GetModuleURI(SECMODModule *module);
 SECMODModule *SECMOD_FindModuleByUri(char *uri);
 /*********************************************************************
  *            Slot mapping utility functions.
@@ -272,10 +272,10 @@ CK_MECHANISM_TYPE PK11_MapSignKeyType(KeyType keyType);
 /**********************************************************************
  *                   Symmetric, Public, and Private Keys 
  **********************************************************************/
-char *PK11_GetPrivateKeyURI(SECKEYPrivateKey *key);
-char *PK11_GetPublicKeyURI(SECKEYPublicKey *key);
-CK_OBJECT_HANDLE *PK11_FindPrivateKeyByURI(PK11SlotInfo *slot, void *wincx, char *uri);
-CK_OBJECT_HANDLE *PK11_FindPrivateKeyByURI(PK11SlotInfo *slot, void *wincx, char *uri);
+char *SECKEY_GetPrivateKeyURI(SECKEYPrivateKey *key);
+char *SECKEY_GetPublicKeyURI(SECKEYPublicKey *key);
+CK_OBJECT_HANDLE *SECKEY_FindPrivateKeyByURI(PK11SlotInfo *slot, void *wincx, char *uri);
+CK_OBJECT_HANDLE *SECKEY_FindPrivateKeyByURI(PK11SlotInfo *slot, void *wincx, char *uri);
 void PK11_FreeSymKey(PK11SymKey *key);
 PK11SymKey *PK11_ReferenceSymKey(PK11SymKey *symKey);
 PK11SymKey *PK11_ImportSymKey(PK11SlotInfo *slot, CK_MECHANISM_TYPE type,
@@ -652,7 +652,7 @@ SECKEYPrivateKey * PK11_CopyTokenPrivKeyToSessionPrivKey(PK11SlotInfo *destSlot,
 /**********************************************************************
  *                   Certs
  **********************************************************************/
-char *PK11_GetCertURI(CERTCertificate *cert, void *wincx);
+char *CERT_GetCertURI(CERTCertificate *cert, void *wincx);
 CK_OBJECT_HANDLE *CERT_FindCertByURI(PK11SlotInfo *slot, void *wincx, char *uri);
 SECItem *PK11_MakeIDFromPubKey(SECItem *pubKeyData);
 SECStatus PK11_TraverseSlotCerts(
