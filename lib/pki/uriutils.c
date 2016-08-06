@@ -132,18 +132,18 @@ CERT_FindCertByURI(PK11SlotInfo *slot, void *wincx, char *uri) {
     }
 
     attributes = p11_kit_uri_get_attributes(URI,&numattrs);
-    theTemplate = malloc(sizeof(CK_ATTRIBUTE)*numattrs);
+    theTemplate = PORT_Alloc(sizeof(CK_ATTRIBUTE)*numattrs);
     for (i=0; i<numattrs; i++) {
         CK_ATTRIBUTE temp =  {attributes[i].type, attributes[i].pValue, attributes[i].ulValueLen};
         theTemplate[i] = temp;
     }
     peerID = pk11_FindObjectsByTemplate(slot, theTemplate, numattrs, &objcount);
-    free(theTemplate);
+    PORT_Free(theTemplate);
     return peerID;
 }
 
 CK_OBJECT_HANDLE *
-PK11_FindPrivateKeyByURI(PK11SlotInfo *slot, void *wincx, char *uri) {
+SECKEY_FindPrivateKeyByURI(PK11SlotInfo *slot, void *wincx, char *uri) {
     P11KitUri *URI;
     int uristatus, objcount;
     CK_ATTRIBUTE_PTR attributes;
@@ -164,18 +164,18 @@ PK11_FindPrivateKeyByURI(PK11SlotInfo *slot, void *wincx, char *uri) {
     }
 
     attributes = p11_kit_uri_get_attributes(URI,&numattrs);
-    theTemplate = malloc(sizeof(CK_ATTRIBUTE)*numattrs);
+    theTemplate = PORT_Alloc(sizeof(CK_ATTRIBUTE)*numattrs);
     for (i=0; i<numattrs; i++) {
         CK_ATTRIBUTE temp =  {attributes[i].type, attributes[i].pValue, attributes[i].ulValueLen};
         theTemplate[i] = temp;
     }
     peerID = pk11_FindObjectsByTemplate(slot, theTemplate, numattrs, &objcount);
-    free(theTemplate);
+    PORT_Free(theTemplate);
     return peerID;
 }
 
 CK_OBJECT_HANDLE *
-PK11_FindPrivateKeyByURI(PK11SlotInfo *slot, void *wincx, char *uri) {
+SECKEY_FindPrivateKeyByURI(PK11SlotInfo *slot, void *wincx, char *uri) {
     P11KitUri *URI;
     int uristatus, objcount;
     CK_ATTRIBUTE_PTR attributes;
@@ -196,12 +196,12 @@ PK11_FindPrivateKeyByURI(PK11SlotInfo *slot, void *wincx, char *uri) {
     }
 
     attributes = p11_kit_uri_get_attributes(URI,&numattrs);
-    theTemplate = malloc(sizeof(CK_ATTRIBUTE)*numattrs);
+    theTemplate = PORT_Alloc(sizeof(CK_ATTRIBUTE)*numattrs);
     for (i=0; i<numattrs; i++) {
         CK_ATTRIBUTE temp =  {attributes[i].type, attributes[i].pValue, attributes[i].ulValueLen};
         theTemplate[i] = temp;
     }
     peerID = pk11_FindObjectsByTemplate(slot, theTemplate, numattrs, &objcount);
-    free(theTemplate);
+    PORT_Free(theTemplate);
     return peerID;
 }
