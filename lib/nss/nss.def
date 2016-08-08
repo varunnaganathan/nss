@@ -159,8 +159,8 @@ SECKEY_GetPublicKeyURI;
 SECMOD_GetModuleURI;
 SECKEY_FindPrivateKeyByURI;
 SECKEY_FindPublicKeyByURI;
-SECMOD_FindModuleByUri
-NSSTrustDomain_FindTokenByUri
+SECMOD_FindModuleByUri;
+NSSTrustDomain_FindTokenByUri;
 CERT_FindCertByURI;
 CERT_CertChainFromCert;
 CERT_DestroyCertificateList;
