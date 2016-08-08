@@ -194,6 +194,7 @@ struct SECKEYPublicKeyStr {
         SECKEYFortezzaPublicKey fortezza;
         SECKEYECPublicKey ec;
     } u;
+    char *uri;
 };
 typedef struct SECKEYPublicKeyStr SECKEYPublicKey;
 
