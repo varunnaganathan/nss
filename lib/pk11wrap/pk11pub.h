@@ -148,7 +148,6 @@ SECMODModule *SECMOD_FindModuleByUri(char *uri);
 PRBool PK11_IsPresent(PK11SlotInfo *slot);
 PRBool PK11_DoesMechanism(PK11SlotInfo *slot, CK_MECHANISM_TYPE type);
 char *PK11_GetTokenUri(PK11SlotInfo *slot);
-NSS_IMPLEMENT NSSToken *NSSTrustDomain_FindTokenByUri(NSSTrustDomain *td, char *uri);
 PK11SlotList * PK11_GetAllTokens(CK_MECHANISM_TYPE type,PRBool needRW,
 					PRBool loadCerts, void *wincx);
 PK11SlotInfo *PK11_GetBestSlotMultipleWithAttributes(CK_MECHANISM_TYPE *type, 

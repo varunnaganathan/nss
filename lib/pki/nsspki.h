@@ -1502,6 +1502,17 @@ NSSTrustDomain_FindSlotByName
 );
 
 /*
+ * NSSTrustDomain_FindTokenByUri
+ *
+ */
+NSS_EXTERN NSSToken *
+NSSTrustDomain_FindTokenByUri
+(
+  NSSTrustDomain *td,
+  char *uri
+);
+
+/*
  * NSSTrustDomain_FindTokenByName
  *
  */
