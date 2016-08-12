@@ -37,7 +37,6 @@ else
 # $(PROGRAM) has NO explicit dependencies on $(EXTRA_SHARED_LIBS)
 # $(EXTRA_SHARED_LIBS) come before $(OS_LIBS), except on AIX.
 EXTRA_SHARED_LIBS += \
-	-lp11-kit \
 	-L$(DIST)/lib \
 	-L$(NSSUTIL_LIB_DIR) \
 	-lnssutil3 \
@@ -54,6 +53,7 @@ endif
 SHARED_LIBRARY_LIBS = \
 	$(DIST)/lib/$(LIB_PREFIX)certhi.$(LIB_SUFFIX) \
 	$(DIST)/lib/$(LIB_PREFIX)cryptohi.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)p11uri.$(LIB_SUFFIX) \
 	$(DIST)/lib/$(LIB_PREFIX)pk11wrap.$(LIB_SUFFIX) \
 	$(DIST)/lib/$(LIB_PREFIX)certdb.$(LIB_SUFFIX) \
 	$(DIST)/lib/$(LIB_PREFIX)nsspki.$(LIB_SUFFIX) \
@@ -75,6 +75,7 @@ SHARED_LIBRARY_LIBS = \
 SHARED_LIBRARY_DIRS = \
 	../certhigh \
 	../cryptohi \
+	../p11uri \
 	../pk11wrap \
 	../certdb \
 	../pki \

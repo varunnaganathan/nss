@@ -18,9 +18,7 @@
 #include "pkim.h"
 #include "utilpars.h"
 
-/* Prevent p11-kit from including its own pkcs11.h */
-#define PKCS11_H 1
-#include <p11-kit/uri.h>
+#include "p11uri.h"
 
 /* these are for displaying error messages */
 
