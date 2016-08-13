@@ -15,7 +15,6 @@ MODULE = nss
 
 CSRCS = \
         p11uri.c \
-	url.c \
 	$(NULL)
 
 LIBRARY_NAME = p11uri
