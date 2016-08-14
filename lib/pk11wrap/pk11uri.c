@@ -26,6 +26,10 @@
 
 
 
+
+/* 
+ * find a module by a given uri string
+*/
 SECMODModule *SECMOD_FindModuleByUri(char *uri)
 {
     P11KitUri *URI;
@@ -35,20 +39,18 @@ SECMODModule *SECMOD_FindModuleByUri(char *uri)
     SECStatus status;
     CK_INFO moduleinfo;
     SECMODListLock *moduleLock = NULL;
-    SECMODModuleList *modules = NULL;
+    SECMODModuleList *modules;
 
-    URI = P11URI_new();
-    if (!uri) {
+    URI = p11_kit_uri_new();
+    if (!URI) {
         PORT_SetError(SEC_ERROR_NO_MEMORY);
         return NULL;
     }
-
-    st = P11URI_parse(uri, P11URI_FOR_MODULE, URI);
-    if (st != P11URI_OK) {
+    st = p11_kit_uri_parse(uri, P11_KIT_URI_FOR_MODULE, URI);
+    if (st != P11_KIT_URI_OK) {
         PORT_SetError(P11_Kit_To_NSS_Error(st));
         return NULL;
     }
-
     moduleLock = SECMOD_GetDefaultModuleListLock();
     if (!moduleLock) {
         PORT_SetError(SEC_ERROR_NOT_INITIALIZED);
@@ -68,20 +70,15 @@ SECMODModule *SECMOD_FindModuleByUri(char *uri)
             SECMOD_ReleaseReadLock(moduleLock);
             return NULL;
         }
-        if (P11URI_match_module_info(URI, &moduleinfo) == 1) {
+        if (p11_kit_uri_match_module_info(URI, &moduleinfo) == 1) {
             module = listnode->module;
             break;
         }
         
     }
     SECMOD_ReleaseReadLock(moduleLock);
-    if(!module) {
-        return (SECMODModule *)NULL;
-    }
     return module;
 }
-
-
 
 //2nd version similar to NSSTrustDomain_FindTokenByName
 NSS_IMPLEMENT NSSToken *
@@ -143,7 +140,6 @@ PK11_GetTokenUri(PK11SlotInfo *slot)
     int status;
 
     PK11_EnterSlotMonitor(slot);
-    //Confirm that this is the token we actually need and not some other token
     if (slot->uri) {
         PK11_ExitSlotMonitor(slot);
         return slot->uri;
@@ -155,7 +151,7 @@ PK11_GetTokenUri(PK11SlotInfo *slot)
         return NULL;
     }
     
-    //Have to unlock to call PK11_GetTokenInfo
+    /* Have to unlock to call PK11_GetTokenInfo */
     PK11_ExitSlotMonitor(slot);
     rv = PK11_GetTokenInfo(slot, P11URI_get_token_info(uri));
     PK11_EnterSlotMonitor(slot);
@@ -169,7 +165,7 @@ PK11_GetTokenUri(PK11SlotInfo *slot)
         PORT_SetError(P11_Kit_To_NSS_Error(status));
         result = NULL;
     }
-    //Set the uri for the token struct 
+    /* Set the uri for the token struct */ 
     slot->uri = result;
     P11URI_free(uri);
     PK11_ExitSlotMonitor(slot);
@@ -178,7 +174,8 @@ PK11_GetTokenUri(PK11SlotInfo *slot)
 
 
 char *
-PK11_GetModuleURI(SECMODModule *module) {
+PK11_GetModuleURI(SECMODModule *module)
+{
     P11KitUri *uri;
     CK_INFO *moduleinfo = NULL;
     char *string = NULL;
@@ -207,14 +204,13 @@ PK11_GetModuleURI(SECMODModule *module) {
     
     moduleinfo = P11URI_get_module_info(uri);
     SECMOD_ReleaseWriteLock(moduleLock);
-    //This fills the module info into the CK_INFO_PTR passed
+    /* This fills the module info into the CK_INFO_PTR passed */
     status = PK11_GetModInfo(module, moduleinfo);
     if (status == SECFailure) {
         return NULL;
     }
 
     SECMOD_GetWriteLock(moduleLock);
-    // Format the uri to string form
     int uristatus = P11URI_format(uri, P11URI_FOR_MODULE, &string);
     if (uristatus != P11URI_OK) {
         PORT_SetError(P11_Kit_To_NSS_Error(uristatus));
@@ -302,7 +298,8 @@ done:
 
 
 //SECOND VERSION
-CK_OBJECT_HANDLE *CERT_FindCertByURI(PK11SlotInfo *slot, void *wincx, char *uri) {
+CK_OBJECT_HANDLE *CERT_FindCertByURI(PK11SlotInfo *slot, void *wincx, char *uri)
+{
     P11KitUri *URI;
     //CK_ATTRIBUTE attrs[3];
     int uristatus, objcount;
@@ -342,7 +339,8 @@ CK_OBJECT_HANDLE *CERT_FindCertByURI(PK11SlotInfo *slot, void *wincx, char *uri)
 
 
 char *
-PK11_GetCertURI(CERTCertificate *cert, void *wincx) {
+PK11_GetCertURI(CERTCertificate *cert, void *wincx)
+{
     P11KitUri *uri;
     int st, uristatus;
     SECStatus rv;
@@ -418,13 +416,13 @@ PK11_GetCertURI(CERTCertificate *cert, void *wincx) {
 }
 
 char *
-PK11_GetPrivateKeyURI(SECKEYPrivateKey *key) {
+PK11_GetPrivateKeyURI(SECKEYPrivateKey *key)
+{
     P11KitUri *URI;
     int st, uristatus;
     SECStatus rv;
     PK11SlotInfo *slot = NULL;
     char *string;
-    //  SECItem result;
     CK_OBJECT_CLASS class = CKO_PRIVATE_KEY;
 
     /* Find the appropriate locking function for a key */
@@ -444,12 +442,9 @@ PK11_GetPrivateKeyURI(SECKEYPrivateKey *key) {
         P11URI_free(URI);
         return NULL;
     }
-    /* Get the SECItem for the CKA_LABEL of the key */
-    //rv = PK11_ReadAttribute(key->pkcs11Slot, key->pkcs11ID, CKA_LABEL, NULL, &result);
     
     /* Assign the attributes of the URI */
-    CK_ATTRIBUTE id = { CKA_ID, &(key->pkcs11ID), sizeof(key->pkcs11ID) };
-    //CK_ATTRIBUTE object = { CKA_LABEL, result.data, result.len };    
+    CK_ATTRIBUTE id = { CKA_ID, &(key->pkcs11ID), sizeof(key->pkcs11ID) };    
     CK_ATTRIBUTE object = {CKA_LABEL, NULL, 0};
     CK_ATTRIBUTE type = { CKA_CLASS, &class, sizeof(class) };
     if (PK11_GetAttributes(NULL, slot, key->pkcs11ID, &object, 1) != CKR_OK) {
@@ -481,15 +476,11 @@ PK11_GetPrivateKeyURI(SECKEYPrivateKey *key) {
 NSSCertificate **
 nssToken_FindObjectsByURI(NSSTrustDomain *td, char *uri)
 {
-  P11KitUri *URI;
-    //CK_ATTRIBUTE attrs[3];
+    P11KitUri *URI;
     int uristatus;
-    //CK_ATTRIBUTE_PTR Id, Object;
     CK_ATTRIBUTE_PTR attributes;
     CK_ULONG numattrs;
     PK11SlotInfo *slot, *slotinfo;
-    //CK_OBJECT_CLASS certclass = CKO_PRIVATE_KEY;
-    //CK_ATTRIBUTE *attr = theTemplate;
     CK_TOKEN_INFO tokeninfo, *tinfo;
     NSSToken *token, *tok;
     nssCryptokiObject **objects;
@@ -547,40 +538,36 @@ nssToken_FindObjectsByURI(NSSTrustDomain *td, char *uri)
     return certs;
 }
 
-
-
-
-// SECOND VERSION
-//Fails because the object doesnt exist in the uri
+/*
+ * find private keys that match a given uri string
+*/
 SECKEYPrivateKeyList *
-PK11_FindPrivateKeyByURI(PK11SlotInfo *slot, void *wincx, char *uri) {
+PK11_FindPrivateKeyByURI(PK11SlotInfo *slot, void *wincx, char *uri)
+{
     P11KitUri *URI;
-    //CK_ATTRIBUTE attrs[3];
     int uristatus, objcount;
-    //CK_ATTRIBUTE_PTR Id, Object;
     CK_ATTRIBUTE_PTR attributes;
     CK_ULONG numattrs, i;
-    //CK_OBJECT_CLASS certclass = CKO_PRIVATE_KEY;
-    //CK_ATTRIBUTE *attr = theTemplate;
     CK_OBJECT_HANDLE *peerID;
     SECKEYPrivateKeyList *keys;
 
-    URI = P11URI_new();
-    if (!uri) {
+    URI = p11_kit_uri_new();
+    if (!URI) {
         PORT_SetError(SEC_ERROR_NO_MEMORY);
         return CK_INVALID_HANDLE;
     }
     
-    uristatus = P11URI_parse(uri, P11URI_FOR_OBJECT_ON_TOKEN, URI);
-    if (uristatus != P11URI_OK) {
+    uristatus = p11_kit_uri_parse(uri, P11_KIT_URI_FOR_OBJECT_ON_TOKEN, URI);
+    if (uristatus != P11_KIT_URI_OK) {
         PORT_SetError(P11_Kit_To_NSS_Error(uristatus));
         return CK_INVALID_HANDLE;
     }
 
-    attributes = P11URI_get_attributes(URI,&numattrs);
+    attributes = p11_kit_uri_get_attributes(URI,&numattrs);
     peerID = pk11_FindObjectsByTemplate(slot, attributes, numattrs, &objcount);
-    //return peerID;
-    // ADDING 
+    if (peerID == NULL) {
+        return NULL;
+    }
     keys = SECKEY_NewPrivateKeyList();
     if (keys == NULL) {
         PORT_Free(peerID);
@@ -596,7 +583,8 @@ PK11_FindPrivateKeyByURI(PK11SlotInfo *slot, void *wincx, char *uri) {
 }
 
 char *
-PK11_GetPublicKeyURI(SECKEYPublicKey *key) {
+PK11_GetPublicKeyURI(SECKEYPublicKey *key)
+{
     P11KitUri *URI;
     int st, uristatus;
     SECStatus rv;
@@ -651,6 +639,9 @@ PK11_GetPublicKeyURI(SECKEYPublicKey *key) {
     }
 }
 
+/*
+ * find all public keys that match a given uri string
+*/
 SECKEYPublicKeyList *
 PK11_FindPublicKeyByURI(PK11SlotInfo *slot, void *wincx, char *uri) {
     P11KitUri *URI;
@@ -659,33 +650,25 @@ PK11_FindPublicKeyByURI(PK11SlotInfo *slot, void *wincx, char *uri) {
     //CK_ATTRIBUTE_PTR Id, Object;
     CK_ATTRIBUTE_PTR attributes;
     CK_ULONG numattrs, i;
-    //CK_OBJECT_CLASS certclass = CKO_PRIVATE_KEY;
-    CK_ATTRIBUTE *theTemplate;
     //CK_ATTRIBUTE *attr = theTemplate;
     CK_OBJECT_HANDLE *peerID;
     SECKEYPublicKeyList *keys;
 
-    URI = P11URI_new();
-    if (!uri) {
+    URI = p11_kit_uri_new();
+    if (!URI) {
         PORT_SetError(SEC_ERROR_NO_MEMORY);
         return CK_INVALID_HANDLE;
     }
-    
-    uristatus = P11URI_parse(uri, P11URI_FOR_OBJECT_ON_TOKEN, URI);
-    if (uristatus != P11URI_OK) {
+    uristatus = p11_kit_uri_parse(uri, P11_KIT_URI_FOR_OBJECT_ON_TOKEN, URI);
+    if (uristatus != P11_KIT_URI_OK) {
         PORT_SetError(P11_Kit_To_NSS_Error(uristatus));
         return CK_INVALID_HANDLE;
     }
-
-    attributes = P11URI_get_attributes(URI,&numattrs);
-    theTemplate = malloc(sizeof(CK_ATTRIBUTE)*numattrs);
-    for (i=0; i<numattrs; i++) {
-        CK_ATTRIBUTE temp =  {attributes[i].type, attributes[i].pValue, attributes[i].ulValueLen};
-        theTemplate[i] = temp;
+    attributes = p11_kit_uri_get_attributes(URI,&numattrs);
+    peerID = pk11_FindObjectsByTemplate(slot, attributes, numattrs, &objcount);
+    if (peerID == NULL) {
+        return NULL;
     }
-
-    peerID = pk11_FindObjectsByTemplate(slot, theTemplate, numattrs, &objcount);
-    PORT_Free(theTemplate);
     //return peerID;
     // ADDED
     keys = SECKEY_NewPublicKeyList();
@@ -702,4 +685,5 @@ PK11_FindPublicKeyByURI(PK11SlotInfo *slot, void *wincx, char *uri) {
    PORT_Free(peerID);
    return keys;
 }
+
 
