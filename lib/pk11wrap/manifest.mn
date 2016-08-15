@@ -45,7 +45,6 @@ CSRCS = \
 	pk11slot.c \
 	pk11uri.c \
 	pk11util.c \
-	pk11urierr.c \
 	$(NULL)
 
 LIBRARY_NAME = pk11wrap
