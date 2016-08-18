@@ -474,6 +474,7 @@ CERT_ImportCRL;
 CERT_IsCACert;
 CERT_IsCADERCert;
 CERT_SetOCSPDefaultResponder;
+CERT_GetCertURI;
 PBE_CreateContext;
 PBE_DestroyContext;
 PBE_GenerateBits;

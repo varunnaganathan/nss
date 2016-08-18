@@ -542,6 +542,57 @@ done:
     return cert;
 }
 
+char *
+CERT_GetCertURI(CERTCertificate *cert, void *wincx) 
+{
+    P11URI *uri;
+    SECStatus rv, st;
+    PK11SlotInfo *slot = NULL;
+    char *string;
+    CK_OBJECT_CLASS class = CKO_CERTIFICATE;
+    CK_OBJECT_HANDLE certHandle;
+    /* Setting values of the URI attributes */
+    CK_ATTRIBUTE attrs[3] = {
+        { CKA_LABEL, cert->nickname, strlen(cert->nickname) },
+        { CKA_CLASS, &class, sizeof(class) },
+        { CKA_ID, NULL, 0 }
+    };
+
+    uri = P11URI_New();
+    if (!uri) {
+        PORT_SetError(SEC_ERROR_NO_MEMORY);
+        return NULL;
+    }
+    
+    slot = cert->slot;
+    if (!slot) {
+        certHandle = PK11_FindObjectForCert(cert, wincx, &slot);
+        if (certHandle != CK_INVALID_HANDLE)
+            PORT_SetError(SEC_ERROR_PKCS11_FUNCTION_FAILED);
+            return NULL;
+    }
+
+    rv = PK11_GetTokenInfo(slot, P11URI_GetTokenInfo(uri));
+    if (rv == SECFailure) {
+        P11URI_Free(uri);
+        return NULL;    
+    }
+
+    if (PK11_GetAttributes(NULL, slot, cert->pkcs11ID, &attrs[2], 1) == CKR_OK)
+        st = P11URI_SetAttributes(uri, attrs, 3);
+    else
+        st = P11URI_SetAttributes(uri, attrs, 2);
+
+    if (st != SECSuccess) {
+        P11URI_Free(uri);
+        return NULL;
+    }
+
+    string = P11URI_Format(uri, P11URI_FOR_OBJECT_ON_TOKEN);
+    P11URI_Free(uri);
+    return string;
+}
+
 CERTCertificate *
 CERT_FindCertByNickname(CERTCertDBHandle *handle, const char *nickname)
 {

@@ -495,6 +495,8 @@ listCerts(CERTCertDBHandle *handle, char *name, char *email,
     SECStatus rv = SECFailure;
     CERTCertList *certs;
     CERTCertListNode *node;
+    secuPWData  pwdata = { PW_NONE, 0 };
+    void *wincx  = &pwdata;
 
     /* List certs on a non-internal slot. */
     if (!PK11_IsFriendly(slot) && PK11_NeedLogin(slot)) {
@@ -556,6 +558,9 @@ listCerts(CERTCertDBHandle *handle, char *name, char *email,
             for (node = CERT_LIST_HEAD(certs); !CERT_LIST_END(node, certs);
                  node = CERT_LIST_NEXT(node)) {
                 SECU_PrintCertNickname(node, stdout);
+                char *cert_uri = CERT_GetCertURI(node->cert, wincx);
+                printf("uri: %s\n", cert_uri);
+                P11URI_FreeString(cert_uri);     
             }
             rv = SECSuccess;
         }
