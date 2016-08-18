@@ -718,6 +718,11 @@ find_certs_from_nickname(const char *nickname, void *wincx)
     char *delimit = NULL;
     char *tokenName;
 
+    if (!strncmp(nickname, P11URI_SCHEME, strlen(P11URI_SCHEME))) {
+	certs = find_certs_from_uri(nickname, wincx);
+	if (certs)
+	    return certs;
+    }
     nickCopy = PORT_Strdup(nickname);
     if (!nickCopy) {
         /* error code is set */
