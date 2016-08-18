@@ -815,6 +815,9 @@ PrintKey(PRFileDesc *out, const char *nickName, int count,
 
     PR_fprintf(out, "<%2d> %-8.8s %-42.42s %s\n", count, 
                keyTypeName[key->keyType], ckaIDbuf, nickName);
+    char *key_uri = PK11_GetPrivateKeyURI(key);
+    printf("URI: %s\n", key_uri);
+    P11URI_Free(key_uri);
     SECITEM_ZfreeItem(ckaID, PR_TRUE);
 
     return SECSuccess;

@@ -525,6 +525,7 @@ SECKEYPrivateKey *PK11_GenerateKeyPair(PK11SlotInfo *slot,
 		 	    PRBool isPerm, PRBool isSensitive, void *wincx);
 SECKEYPrivateKey * PK11_FindPrivateKeyFromCert(PK11SlotInfo *slot,
 				 	CERTCertificate *cert, void *wincx);
+char *PK11_GetPrivateKeyURI(SECKEYPrivateKey *key);
 SECKEYPrivateKey * PK11_FindKeyByAnyCert(CERTCertificate *cert, void *wincx);
 SECKEYPrivateKey * PK11_FindKeyByKeyID(PK11SlotInfo *slot, SECItem *keyID,
 				       void *wincx);

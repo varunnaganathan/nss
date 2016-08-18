@@ -507,6 +507,7 @@ PK11_IsLoggedIn;
 PK11_KeyForDERCertExists;
 PK11_KeyForCertExists;
 PK11_ListPrivateKeysInSlot;
+PK11_GetPrivateKeyURI;
 PK11_ListCertsInSlot;
 PK11_Logout;
 PK11_NeedPWInit;
