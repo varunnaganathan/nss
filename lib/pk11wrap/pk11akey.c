@@ -2197,13 +2197,66 @@ PK11_GetPrivateKeyURI(SECKEYPrivateKey *key)
         P11URI_Free(URI);
         return NULL;
     }
-    
+
     /* Assign the attributes of the URI */
     if (PK11_GetAttributes(NULL, slot, key->pkcs11ID, &attrs[2], 1) != CKR_OK) {
         st = P11URI_SetAttributes(URI, attrs, 2);           
     }
     else
         st = P11URI_SetAttributes(URI, attrs, 3);    
+    if (st != SECSuccess) {
+        P11URI_Free(URI);
+        return NULL;
+    }
+
+    string = P11URI_Format(URI, P11URI_FOR_OBJECT_ON_TOKEN);
+    P11URI_Free(URI);
+    return string;
+    
+}
+
+/*
+ * returns the URI string for a given public key
+*/
+char *
+PK11_GetPublicKeyURI(SECKEYPublicKey *key)
+{
+    P11URI *URI;
+    SECStatus rv, st;
+    PK11SlotInfo *slot = NULL;
+    char *string;
+    //  SECItem result;
+    CK_OBJECT_CLASS class = CKO_PUBLIC_KEY;
+    CK_ATTRIBUTE attrs[3] = {
+        { CKA_CLASS, &class, sizeof(class) },
+        { CKA_ID, &(key->pkcs11ID), sizeof(key->pkcs11ID) },
+        { CKA_LABEL, NULL, 0 }
+    };
+
+    URI = P11URI_New();
+    if (!URI) {
+        PORT_SetError(SEC_ERROR_NO_MEMORY);
+        return NULL;
+    }
+
+    slot = key->pkcs11Slot;
+    rv = PK11_GetTokenInfo(slot, P11URI_GetTokenInfo(URI));
+    if (rv == SECFailure) {
+        P11URI_Free(URI);
+        return NULL;
+    }
+    /* Get the SECItem for the CKA_LABEL of the key */
+    //rv = PK11_ReadAttribute(key->pkcs11Slot, key->pkcs11ID, CKA_LABEL, NULL, &result);
+    
+    /* Assign the attributes of the URI */
+    //CK_ATTRIBUTE id = { CKA_ID, &(key->pkcs11ID), sizeof(key->pkcs11ID) };
+    //CK_ATTRIBUTE object = {CKA_LABEL, NULL, 0};
+    //CK_ATTRIBUTE type = { CKA_CLASS, &class, sizeof(class) };
+    if (PK11_GetAttributes(NULL, slot, key->pkcs11ID, &attrs[2], 1) != CKR_OK) {
+        st = P11URI_SetAttributes(URI, attrs, 2);           
+    }
+    else
+        st = P11URI_SetAttributes(URI, attrs, 3);
     if (st != SECSuccess) {
         P11URI_Free(URI);
         return NULL;
