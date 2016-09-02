@@ -739,6 +739,11 @@ PK11_FindCertsFromNickname(const char *nickname, void *wincx)
 	nssList *nameList;
 	nssCryptokiObject **instances;
 	nssTokenSearchType tokenOnly = nssTokenSearchType_TokenOnly;
+	if (!PK11_IsPresent(slot)) {
+	    PK11_FreeSlot(slot);
+	    if (nickCopy) PORT_Free(nickCopy);
+	    return NULL;
+	}
    	rv = pk11_AuthenticateUnfriendly(slot, PR_TRUE, wincx);
 	if (rv != SECSuccess) {
 	    PK11_FreeSlot(slot);
