@@ -80,6 +80,8 @@ typedef enum {
 
 typedef struct P11URIStr P11URI;
 
+#define P11URI_SCHEME "pkcs11:"
+
 CK_INFO_PTR P11URI_GetModuleInfo(P11URI *uri);
 PRBool P11URI_MatchModuleInfo(P11URI *uri, CK_INFO_PTR info);
 

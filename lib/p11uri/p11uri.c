@@ -83,8 +83,6 @@ struct P11URIStr {
 
 const static char HEX_CHARS[] = "0123456789abcdef";
 
-#define P11URI_SCHEME "pkcs11:"
-
 static PRBool
 match_struct_string(const unsigned char *inuri, const unsigned char *real,
                     size_t length)
@@ -374,7 +372,8 @@ P11URI_SetPinValue(P11URI *uri, const char *pin)
 {
     PORT_Assert(uri != NULL);
 
-    PORT_Free(uri->pin_value);
+    if (uri->pin_value)
+        PORT_ZFree(uri->pin_value, PL_strlen(uri->pin_value));
 
     if (pin == NULL)
         uri->pin_value = NULL;
@@ -444,8 +443,8 @@ format_raw_string(char **buf, const char *name, const char *value)
                              *buf ? ";" : P11URI_SCHEME,
                              name, value);
     if (*buf == NULL) {
-        /* PR_sprintf_append() will already have called
-	   PORT_SetError() so we don't need to. */
+        /* PR_sprintf_append() will already have called PORT_SetError()
+           (and freed the old buf) so we don't need to. */
         return SECFailure;
     }
 
@@ -532,6 +531,13 @@ format_attribute_class(char **buf, const char *name, CK_ATTRIBUTE_PTR attr)
     if (attr == NULL)
         return SECSuccess;
 
+    /* We will only ever be called for CKA_CLASS attrs so we don't need to
+     * check that, but checking that it's a *valid* CKA_CLASS seems sane. */
+    if (attr->ulValueLen != sizeof(klass)) {
+        PORT_SetError(SEC_ERROR_INVALID_ARGS);
+        return SECFailure;
+    }
+
     klass = *((CK_OBJECT_CLASS *)attr->pValue);
     switch (klass) {
         case CKO_DATA:
@@ -559,7 +565,7 @@ format_attribute_class(char **buf, const char *name, CK_ATTRIBUTE_PTR attr)
 static SECStatus
 format_struct_version(char **buf, const char *name, CK_VERSION_PTR version)
 {
-    char verbuf[64];
+    char verbuf[64]; /* Easily sufficient for "255.255" */
 
     /* Not set */
     if (version->major == (CK_BYTE)-1 && version->minor == (CK_BYTE)-1)
@@ -609,6 +615,7 @@ P11URI_Format(P11URI *uri, P11URIType uri_type)
             goto out;
     }
 
+    /* Only valid with module */
     if ((uri_type & P11URI_FOR_MODULE_WITH_VERSION) ==
         P11URI_FOR_MODULE_WITH_VERSION) {
         rv = format_struct_version(&buffer, "library-version",
@@ -644,6 +651,7 @@ P11URI_Format(P11URI *uri, P11URIType uri_type)
     }
 
     if ((uri_type & P11URI_FOR_OBJECT) == P11URI_FOR_OBJECT) {
+        /* CKA_ID is always %-encoded even for printable chars */
         rv = format_attribute_string(&buffer, "id",
                                      P11URI_GetAttribute(uri, CKA_ID),
                                      PR_TRUE);
@@ -682,12 +690,16 @@ P11URI_Format(P11URI *uri, P11URIType uri_type)
         buffer = PR_smprintf(P11URI_SCHEME);
 out:
     if (rv == SECFailure) {
-        PR_smprintf_free(buffer);
+        P11URI_FreeString(buffer);
         return NULL;
     }
     return buffer;
 }
 
+/* Simply strip whitespace from the value/end string. Used for
+ * keys in the key=value pairs in a URI string, and also for
+ * the value in a type={cert,private,etc.} field because that's
+ * also a fixed string. */
 static char *
 key_decode(const char *value, const char *end)
 {
@@ -737,21 +749,23 @@ url_decode(const char *value, const char *end, const char *skip,
     p = result;
     while (value != end) {
         /*
-	 * A percent sign followed by two hex digits means
-	 * that the digits represent an escaped character.
-	 */
+         * A percent sign followed by two hex digits means
+         * that the digits represent an escaped character.
+         * On error, use PORT_ZFree() in case we were decoding
+         * a pin-value= field.
+         */
         if (*value == '%') {
             value++;
             if (value + 2 > end) {
                 PORT_SetError(SEC_ERROR_INVALID_ARGS);
-                PORT_Free(result);
+                PORT_ZFree(result, p - result);
                 return NULL;
             }
             a = strchr(HEX_CHARS, tolower(value[0]));
             b = strchr(HEX_CHARS, tolower(value[1]));
             if (!a || !b) {
                 PORT_SetError(SEC_ERROR_INVALID_ARGS);
-                PORT_Free(result);
+                PORT_ZFree(result, p - result);
                 return NULL;
             }
             *p = (a - HEX_CHARS) << 4;
@@ -924,6 +938,8 @@ atoin(const char *start, const char *end)
             return -1;
         ret *= 10;
         ret += (*start - '0');
+        if (ret > 255)
+            return -1;
         ++start;
     }
 
@@ -1028,7 +1044,8 @@ parse_extra_info(const char *name, const char *start, const char *end,
         pin_source = url_decode(start, end, P11_URL_WHITESPACE, NULL);
         if (pin_source == NULL)
             return -1;
-        PORT_Free(uri->pin_value);
+        if (uri->pin_value)
+            PORT_ZFree(uri->pin_value, PL_strlen(uri->pin_value));
         uri->pin_value = (char *)pin_source;
         return 1;
     }
@@ -1077,7 +1094,8 @@ P11URI_Parse(const char *string, P11URIType uri_type, P11URI *uri)
     uri->unrecognized = 0;
     PORT_Free(uri->pin_source);
     uri->pin_source = NULL;
-    PORT_Free(uri->pin_value);
+    if (uri->pin_value)
+        PORT_ZFree(uri->pin_value, PL_strlen(uri->pin_value));
     uri->pin_value = NULL;
 
     for (;;) {
@@ -1132,6 +1150,8 @@ P11URI_Parse(const char *string, P11URIType uri_type, P11URI *uri)
 void
 P11URI_FreeString(char *string)
 {
+    if (string)
+        memset(string, 0, PL_strlen(string));
     PR_smprintf_free(string);
 }
 
@@ -1143,6 +1163,7 @@ P11URI_Free(P11URI *uri)
 
     P11URI_ClearAttributes(uri);
     PORT_Free(uri->pin_source);
-    PORT_Free(uri->pin_value);
+    if (uri->pin_value)
+        PORT_ZFree(uri->pin_value, PL_strlen(uri->pin_value));
     PORT_Free(uri);
 }
